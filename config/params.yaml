@@ -1,0 +1,46 @@
+ip_camera_ros2:
+  ros__parameters:
+    # SDK configuration
+    image_topic: /image
+    cam_info_topic: /camera_info
+    image_height: 720
+    image_width: 1280
+    url: rtsp://admin:password@ip
+    tf: "camera_optical_link"
+    frame_rate: 30
+    # Camera calibration info
+    enable_cam_info: true # true enables camera info publishing
+    # Paste here your camera calibration parameters following the format:
+    camera_matrix:
+      [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    distortion_model: equidistant
+    distortion_coefficients: [0.0, 0.0, 0.0, 0.0]
+    rectification_matrix: [1., 0., 0., 0., 1., 0., 0., 0., 1.]
+    projection_matrix:
+      [
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0
+      ]
+ipcam_tf_broadcaster:
+  ros__parameters:
+    # Static TF2 Broadcaste
+    # Setup here camera position and parent frame
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+    tf: "camera_base_link"
+    parent_frame: 'map'
+

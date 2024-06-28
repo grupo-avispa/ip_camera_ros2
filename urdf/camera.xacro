@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+<robot name="camera" xmlns:xacro="http://ros.org/wiki/xacro">
+    <!-- Xacro properties -->
+	<xacro:property name="camera_trans_x" value="0.0" />
+	<xacro:property name="camera_trans_y" value="0.0" />
+	<xacro:property name="camera_trans_z" value="0.0" />
+    <xacro:property name="camera_optical_rot_x" value="0.0" />
+    <xacro:property name="camera_optical_rot_y" value="0.0" />
+    <xacro:property name="camera_optical_rot_z" value="0.0" />
+
+	<!-- Materials -->
+	<material name="white">  <color rgba="1 1 1 1"/> </material>
+
+    <!-- camera base link -->
+	<link name="camera_base_link">
+		<visual>
+			<origin rpy="0 0 0" xyz="${camera_trans_x} ${camera_trans_y} ${camera_trans_z}"/>
+			<geometry>
+				<cylinder length="0.1" radius="0.1"/>
+			</geometry>
+			<material name="white"/>
+		</visual>
+	</link>
+
+    <!-- Camera optical link -->
+    <link name="camera_optical_link">
+    </link>
+    <joint name="camera_optical_joint" type="fixed">
+        <parent link="camera_base_link"/>
+        <child link="camera_optical_link"/>
+        <origin xyz="0 0 0" rpy="${camera_optical_rot_x} ${camera_optical_rot_y} ${camera_optical_rot_z}"/>
+    </joint>
+</robot>

@@ -39,6 +39,8 @@ IpCameraRos2::~IpCameraRos2(){
 void IpCameraRos2::publish_ipcam_image(){
     // Check if camera parameters were set correctly
     if(!correct_cam_info_ && enable_cam_info_){
+        RCLCPP_ERROR(this->get_logger(), 
+            "Camera info parameters has some errors, check it o disable camera info publishing");
         return;
     }
     // Check video capture is corret
@@ -63,7 +65,19 @@ void IpCameraRos2::publish_ipcam_image(){
     }
     // Resize image
     if(image_width_ > 0 && image_height_ > 0){
-        cv::resize(cap_frame, cap_frame, cv::Size(image_width_, image_height_));
+        // Crop image
+        if(offset_x_ > 0 && offset_y_ > 0){
+            cv::Rect roi;
+            roi.x = offset_x_;
+            roi.y = offset_y_;
+            roi.width = image_width_;
+            roi.height = image_height_;
+            cap_frame = cap_frame(roi);
+        }
+        // Only resize image
+        else{
+            cv::resize(cap_frame, cap_frame, cv::Size(image_width_, image_height_));
+        }
     }
     // Create image msg
     rclcpp::Time stamp = this->get_clock()->now();
@@ -127,6 +141,18 @@ void IpCameraRos2::update_params(){
                             .set__description("Depth image width"));
     this->get_parameter("image_width", image_width_);
     RCLCPP_INFO(this->get_logger(), "The parameter image_width is set to: [%d]", image_width_);
+
+    nav2_util::declare_parameter_if_not_declared(this, "offset_x", rclcpp::ParameterValue(100), 
+                            rcl_interfaces::msg::ParameterDescriptor()
+                            .set__description("Crop image offset X"));
+    this->get_parameter("offset_x", offset_x_);
+    RCLCPP_INFO(this->get_logger(), "The parameter offset_x is set to: [%d]", offset_x_);
+
+    nav2_util::declare_parameter_if_not_declared(this, "offset_y", rclcpp::ParameterValue(100), 
+                            rcl_interfaces::msg::ParameterDescriptor()
+                            .set__description("Crop image offset Y"));
+    this->get_parameter("offset_y", offset_y_);
+    RCLCPP_INFO(this->get_logger(), "The parameter offset_y is set to: [%d]", offset_y_);
 
     nav2_util::declare_parameter_if_not_declared(this, "url", rclcpp::ParameterValue("ipcam_url"), 
                             rcl_interfaces::msg::ParameterDescriptor()

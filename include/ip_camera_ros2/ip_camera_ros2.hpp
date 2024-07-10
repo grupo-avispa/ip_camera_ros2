@@ -45,6 +45,12 @@ class IpCameraRos2 : public rclcpp::Node{
         /// Final image width after resize (set to -1 if not used)
         int image_width_;
 
+        /// For image crop (set to -1 if not used)
+        int offset_x_;
+
+        /// For image crop (set to -1 if not used)
+        int offset_y_;
+
         /// Camera selected frame
         std::string frame_;
 

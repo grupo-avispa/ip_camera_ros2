@@ -64,6 +64,7 @@ def generate_launch_description():
             package='tf2_ros',
             namespace = '',
             executable='static_transform_publisher',
+            name = 'ipcam_tf',
             arguments= ["0", "0", "0", "0", "0", "0", "map", "camera_base_link"]
         )
     # Create the IP Cam node.

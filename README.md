@@ -97,11 +97,11 @@ Static transform publisher from tf2_ros package.
 
 * **`offset_x`** (int, default: -1)
 
-	Final image X pixel top left corner after crop (set to -1 if not used).
+	Image X top left corner pixel before crop (set to -1 if not used).
 
 * **`offset_y`** (int, default: -1)
 
-	Final image Y pixel top left corner after crop (set to -1 if not used).
+	Image Y top left corner pixel before crop (set to -1 if not used).
 
 	If `image_height`, `image_width`, `offset_x` and `offset_y` are greater than zero, 
 	crop image tranformation will be applied. If only `image_height` and `image_width` are greater 

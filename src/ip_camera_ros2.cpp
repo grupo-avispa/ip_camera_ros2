@@ -130,25 +130,25 @@ void IpCameraRos2::update_params(){
     this->get_parameter("cam_info_topic", cam_info_topic_);
     RCLCPP_INFO(this->get_logger(), "The parameter cam_info_topic is set to: [%s]", cam_info_topic_.c_str());
 
-    nav2_util::declare_parameter_if_not_declared(this, "image_height", rclcpp::ParameterValue(320), 
+    nav2_util::declare_parameter_if_not_declared(this, "image_height", rclcpp::ParameterValue(-1), 
                             rcl_interfaces::msg::ParameterDescriptor()
                             .set__description("Depth image height"));
     this->get_parameter("image_height", image_height_);
     RCLCPP_INFO(this->get_logger(), "The parameter image_height is set to: [%d]", image_height_);
 
-    nav2_util::declare_parameter_if_not_declared(this, "image_width", rclcpp::ParameterValue(900), 
+    nav2_util::declare_parameter_if_not_declared(this, "image_width", rclcpp::ParameterValue(-1), 
                             rcl_interfaces::msg::ParameterDescriptor()
                             .set__description("Depth image width"));
     this->get_parameter("image_width", image_width_);
     RCLCPP_INFO(this->get_logger(), "The parameter image_width is set to: [%d]", image_width_);
 
-    nav2_util::declare_parameter_if_not_declared(this, "offset_x", rclcpp::ParameterValue(100), 
+    nav2_util::declare_parameter_if_not_declared(this, "offset_x", rclcpp::ParameterValue(-1), 
                             rcl_interfaces::msg::ParameterDescriptor()
                             .set__description("Crop image offset X"));
     this->get_parameter("offset_x", offset_x_);
     RCLCPP_INFO(this->get_logger(), "The parameter offset_x is set to: [%d]", offset_x_);
 
-    nav2_util::declare_parameter_if_not_declared(this, "offset_y", rclcpp::ParameterValue(100), 
+    nav2_util::declare_parameter_if_not_declared(this, "offset_y", rclcpp::ParameterValue(-1), 
                             rcl_interfaces::msg::ParameterDescriptor()
                             .set__description("Crop image offset Y"));
     this->get_parameter("offset_y", offset_y_);
@@ -159,7 +159,7 @@ void IpCameraRos2::update_params(){
                             .set__description("IP Cam url"));
     this->get_parameter("url", url_);
 
-    nav2_util::declare_parameter_if_not_declared(this, "tf", rclcpp::ParameterValue("reolink_optical_link"), 
+    nav2_util::declare_parameter_if_not_declared(this, "tf", rclcpp::ParameterValue("camera_optical_link"), 
                             rcl_interfaces::msg::ParameterDescriptor()
                             .set__description("camera frame"));
     this->get_parameter("tf", frame_);

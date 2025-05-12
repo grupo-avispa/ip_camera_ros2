@@ -1,6 +1,7 @@
 # ip_camera_ros2
-![ROS2](https://img.shields.io/badge/ros2-humble-blue?logo=ros&logoColor=white)
+![ROS2](https://img.shields.io/badge/ros2-jazzy-blue?logo=ros&logoColor=white)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Build](https://github.com/grupo-avispa/depth_anything_v2_ros2/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/grupo-avispa/depth_anything_v2_ros2/actions/workflows/build.yml)
 
 ## Overview
 This ROS2 package provides a generic interface for publishing RGB image from any IP camera. I also includes a static transform publisher and camera info publisher in case you need any of these applications.
@@ -9,14 +10,14 @@ This ROS2 package provides a generic interface for publishing RGB image from any
 ![RGB](doc/image_and_tf.png)
 
 
-The ip_camera_ros2 package has been tested under [ROS2] Humble on [Ubuntu] 22.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
+The ip_camera_ros2 package has been tested under [ROS2] jazzy on [Ubuntu] 22.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
 ## Installation
 ### Building from Source
 
 #### Dependencies
 
-- [Robot Operating System (ROS) 2](https://docs.ros.org/en/humble/) (middleware for robotics),
+- [Robot Operating System (ROS) 2](https://docs.ros.org/en/jazzy/) (middleware for robotics),
 - [OpenCV](https://opencv.org/) (computer vision library),
 - [cv_bridge](http://wiki.ros.org/cv_bridge) (interface OpenCV with ROS)
 
@@ -31,7 +32,7 @@ git clone https://github.com/grupo-avispa/ip_camera_ros2.git -b main
 Then, install the ROS2 dependencies using rosdep and build the package using:
 ```bash
 cd colcon_workspace
-rosdep install -i --from-path src --rosdistro humble -y
+rosdep install -i --from-path src --rosdistro jazzy -y
 colcon build --symlink-install
 ```
 
@@ -134,6 +135,6 @@ Static transform publisher from tf2_ros package.
 
 
 [Ubuntu]: https://ubuntu.com/
-[ROS2]: https://docs.ros.org/en/humble/
-[sensor_msgs/Image]: https://docs.ros2.org/humble/api/sensor_msgs/msg/Image.html
-[sensor_msgs/CameraInfo]: https://docs.ros2.org/humble/api/sensor_msgs/msg/CameraInfo.html
+[ROS2]: https://docs.ros.org/en/jazzy/
+[sensor_msgs/Image]: https://docs.ros2.org/jazzy/api/sensor_msgs/msg/Image.html
+[sensor_msgs/CameraInfo]: https://docs.ros2.org/jazzy/api/sensor_msgs/msg/CameraInfo.html

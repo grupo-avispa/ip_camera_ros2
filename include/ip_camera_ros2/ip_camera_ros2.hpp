@@ -8,7 +8,7 @@
 
 // ROS 2
 #include "rclcpp/rclcpp.hpp"
-#include "cv_bridge/cv_bridge.h"
+#include "cv_bridge/cv_bridge.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 

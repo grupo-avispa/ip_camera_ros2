@@ -4,65 +4,57 @@
 #include "nav2_util/string_utils.hpp"
 
 #include "ip_camera_ros2/ip_camera_ros2.hpp"
+#include <chrono>
 
 IpCameraRos2::IpCameraRos2() : Node("ip_camera_ros2"){
     // Update ros2 params
     update_params();
+    // Initialize publishers
+    image_msg_ = initialize_image_msg();
+    // Initialize frame buffer for producer-consumer pattern
+    frame_buffer_.reserve(30);  // Pre-allocate space for efficiency
+    // Initialize Callback Group
+    cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-    image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
-    image_topic_,
-    rclcpp::SensorDataQoS());
+    image_pub_ = image_transport::create_publisher(
+        this,
+        image_topic_);
+    
+    // Initialize Timer
+    unsigned int frame_period_ms = static_cast<unsigned int>(1000 / frame_rate_);
+    RCLCPP_INFO(this->get_logger(), "Frame period set to: %u ms", frame_period_ms);
+    timer_ = this->create_wall_timer(
+      std::chrono::milliseconds(frame_period_ms),
+      std::bind(&IpCameraRos2::capture_ipcam_image, this),
+      cb_group_);
+    
     if(enable_cam_info_){
+        cam_info_msg_ = create_cam_info_msg(this->get_clock()->now());
         cam_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>(
         cam_info_topic_,
         10);
     }
-
-    // Initialize timers
-    // Image publishing timer
-    unsigned int publish_period = 1000/frame_rate_;
-    image_timer_ = this->create_wall_timer(
-        std::chrono::milliseconds(publish_period), 
-        std::bind(&IpCameraRos2::publish_ipcam_image, 
-        this));
-    RCLCPP_INFO(this->get_logger(), "Publishing image every [%d] ms", publish_period);
-
-    // Open IP Cam stream
-    cap_.open(url_);
-    cap_.set(cv::CAP_PROP_FPS, frame_rate_);
 }
 
-IpCameraRos2::~IpCameraRos2(){
-    cap_.release();
-}
+IpCameraRos2::~IpCameraRos2(){}
 
-void IpCameraRos2::publish_ipcam_image(){
-    // Check if camera parameters were set correctly
-    if(!correct_cam_info_ && enable_cam_info_){
-        RCLCPP_ERROR(this->get_logger(), 
-            "Camera info parameters has some errors, check it o disable camera info publishing");
-        return;
+void IpCameraRos2::capture_ipcam_image(){
+    // RCLCPP_INFO(this->get_logger(), "Image CAPTURED IN");
+    // auto start = std::chrono::high_resolution_clock::now();
+    
+    cv::Mat local_frame;
+    
+    // Consumer: Get frame from buffer
+    {
+        std::lock_guard<std::mutex> lock(buffer_mutex_);
+        if (frame_buffer_.empty()) {
+            RCLCPP_WARN(this->get_logger(), "No frames available in buffer");
+            return;
+        }
+        local_frame = frame_buffer_.back().clone();
+        frame_buffer_.pop_back();
     }
-    // Check video capture is corret
-    if (!cap_.isOpened()) {
-        RCLCPP_ERROR(this->get_logger(), "Could not open IP Cam at: [%s]", url_.c_str());
-        RCLCPP_INFO(this->get_logger(), "Trying to open again Video Capture");
-        // Retry to Open IP Cam stream
-        cap_.open(url_);
-        cap_.set(cv::CAP_PROP_FPS, frame_rate_);
-        RCLCPP_INFO(this->get_logger(), "Successfully opened Video Capture");
-        return;
-    }
-    cv::Mat cap_frame;
-    cap_.read(cap_frame);
-    // Check video frame is read correctly
-    if (cap_frame.empty()) {
-        RCLCPP_ERROR(this->get_logger(), "Could not capture the frame, closing Video Capture");
-        // Reset capture
-        cap_.release();
-        RCLCPP_INFO(this->get_logger(), "Video Capture closed");
-        return;
-    }
+    // Process image
     // Resize image
     if(image_width_ > 0 && image_height_ > 0){
         // Crop image
@@ -72,32 +64,34 @@ void IpCameraRos2::publish_ipcam_image(){
             roi.y = offset_y_;
             roi.width = image_width_;
             roi.height = image_height_;
-            cap_frame = cap_frame(roi);
+            local_frame = local_frame(roi);
         }
         // Only resize image
         else{
-            cv::resize(cap_frame, cap_frame, cv::Size(image_width_, image_height_));
+            cv::resize(local_frame, local_frame, cv::Size(image_width_, image_height_));
         }
     }
     // Create image msg
     rclcpp::Time stamp = this->get_clock()->now();
-    cv_bridge::CvImage image_msg;
-    image_msg = create_image_msg(stamp, cap_frame);
+    image_msg_.header.stamp = stamp;
+    image_msg_.image = local_frame;
     // Create camera info msg
     if(enable_cam_info_){
-        sensor_msgs::msg::CameraInfo cam_info_msg;
-        cam_info_msg = create_cam_info_msg(stamp);
-        cam_info_pub_->publish(cam_info_msg);
+        // sensor_msgs::msg::CameraInfo cam_info_msg;
+        cam_info_msg_.header.stamp = stamp;
+        cam_info_pub_->publish(cam_info_msg_);
     }
-    image_pub_->publish(*image_msg.toImageMsg());
+    image_pub_.publish(*image_msg_.toImageMsg());
+    
+    // auto end = std::chrono::high_resolution_clock::now();
+    // auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    // RCLCPP_INFO(this->get_logger(), "Capture elapsed time: %ld ms", elapsed.count());
 }
 
-cv_bridge::CvImage IpCameraRos2::create_image_msg(rclcpp::Time stamp, cv::Mat &image){
+cv_bridge::CvImage IpCameraRos2::initialize_image_msg(){
     cv_bridge::CvImage image_msg;
-    image_msg.header.stamp = stamp;
     image_msg.header.frame_id = frame_;
     image_msg.encoding = sensor_msgs::image_encodings::BGR8;
-    image_msg.image = image;
     return image_msg;
 }
 
@@ -167,9 +161,15 @@ void IpCameraRos2::update_params(){
 
     nav2_util::declare_parameter_if_not_declared(this, "frame_rate", rclcpp::ParameterValue(30), 
                             rcl_interfaces::msg::ParameterDescriptor()
-                            .set__description("Image publishing frame rate"));
+                            .set__description("frame rate for capturing images"));
     this->get_parameter("frame_rate", frame_rate_);
     RCLCPP_INFO(this->get_logger(), "The parameter frame_rate is set to: [%d]", frame_rate_);
+
+    nav2_util::declare_parameter_if_not_declared(this, "buffer_size", rclcpp::ParameterValue(30), 
+                            rcl_interfaces::msg::ParameterDescriptor()
+                            .set__description("frame buffer size for the producer-consumer pattern"));
+    this->get_parameter("buffer_size", buffer_size_);
+    RCLCPP_INFO(this->get_logger(), "The parameter buffer_size is set to: [%zu]", buffer_size_);
 
     // Calibration parameters
     nav2_util::declare_parameter_if_not_declared(this, "enable_cam_info", rclcpp::ParameterValue(false), 
@@ -217,5 +217,60 @@ void IpCameraRos2::update_params(){
         }
     }else{
         RCLCPP_INFO(this->get_logger(), "The parameter enable_cam_info is set to: [false]");
+    }
+}
+
+/* RTSPCapturer Implementation */
+
+RTSPCapturer::RTSPCapturer(const std::string& url, 
+                            std::vector<cv::Mat>& frame_buffer, 
+                            std::mutex& buffer_mutex,
+                            size_t buffer_size)
+    : url_(url), frames_(frame_buffer), buffer_mutex_(buffer_mutex), buffer_size_(buffer_size) {
+}
+
+RTSPCapturer::~RTSPCapturer() {
+    cap_.release();
+}
+
+void RTSPCapturer::run() {
+    cap_.open(url_, cv::CAP_FFMPEG);
+    
+    if (!cap_.isOpened()) {
+        std::cerr << "Error: Could not open RTSP stream: " << url_ << std::endl;
+        return;
+    }
+    
+    std::cout << "RTSP Capturer started for: " << url_ << std::endl;
+    
+    cv::Mat frame;
+    // Producer loop: capture frames continuously
+    while (cap_.isOpened()) {
+       // Grab a frame
+        if (!cap_.grab()) {
+            std::cerr << "Error: Cannot grab frame from RTSP stream." << std::endl;
+            continue;
+        }
+
+        // Retrieve and process the frame
+        cap_.retrieve(frame);
+        
+        if (frame.empty()) {
+            std::cerr << "Warning: Empty frame captured" << std::endl;
+            continue;
+        }
+        
+        // Add frame to buffer (producer)
+        {
+            std::lock_guard<std::mutex> lock(buffer_mutex_);
+            // Keep buffer size limited (e.g., max 30 frames)
+            if (frames_.size() >= buffer_size_) {
+                frames_.erase(frames_.begin());
+            }
+            frames_.push_back(frame);
+        }
+        
+        // Small delay to control capture rate
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }

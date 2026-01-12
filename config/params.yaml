@@ -10,6 +10,7 @@ ip_camera_ros2:
     url: rtsp://admin:password@ip
     tf: "camera_optical_link"
     frame_rate: 30
+    buffer_size: 30
     # Camera calibration info
     enable_cam_info: true # true enables camera info publishing
     # Paste here your camera calibration parameters following the format:

@@ -48,7 +48,7 @@ void IpCameraRos2::capture_ipcam_image(){
     {
         std::lock_guard<std::mutex> lock(buffer_mutex_);
         if (frame_buffer_.empty()) {
-            RCLCPP_WARN(this->get_logger(), "No frames available in buffer");
+            RCLCPP_DEBUG(this->get_logger(), "No frames available in buffer");
             return;
         }
         local_frame = frame_buffer_.back().clone();

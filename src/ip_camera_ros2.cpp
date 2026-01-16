@@ -12,7 +12,7 @@ IpCameraRos2::IpCameraRos2() : Node("ip_camera_ros2"){
     // Initialize publishers
     image_msg_ = initialize_image_msg();
     // Initialize frame buffer for producer-consumer pattern
-    frame_buffer_.reserve(30);  // Pre-allocate space for efficiency
+    frame_buffer_.reserve(buffer_size_);  // Pre-allocate space for efficiency
     // Initialize Callback Group
     cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 

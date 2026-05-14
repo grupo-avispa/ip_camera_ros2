@@ -14,15 +14,15 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6.0.2
         with:
           submodules: recursive
       - name: Setup ROS 2
-        uses: ros-tooling/setup-ros@0.7.5
+        uses: ros-tooling/setup-ros@0.7.16
         with:
           required-ros-distributions: jazzy
       - name: Build packages
-        uses: ros-tooling/action-ros-ci@0.3.13
+        uses: ros-tooling/action-ros-ci@0.4.7
         with:
           package-name: ip_camera_ros2
           target-ros2-distro: jazzy

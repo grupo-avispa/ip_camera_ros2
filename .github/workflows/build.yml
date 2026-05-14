@@ -15,8 +15,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6.0.2
-        with:
-          submodules: recursive
       - name: Setup ROS 2
         uses: ros-tooling/setup-ros@0.7.16
         with:

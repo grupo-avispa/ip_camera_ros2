@@ -1,5 +1,20 @@
-#ifndef IP_CAMERA_ROS2__IPCAM_ROS2_
-#define IP_CAMERA_ROS2__IPCAM_ROS2_
+// Copyright (c) 2024 Óscar Pons Fernández
+// Copyright (c) 2024 Grupo Avispa, DTE, Universidad de Málaga
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef IP_CAMERA_ROS2__IP_CAMERA_ROS2_HPP_
+#define IP_CAMERA_ROS2__IP_CAMERA_ROS2_HPP_
 
 // C++
 #include <deque>
@@ -150,4 +165,4 @@ private:
   void update_params();
 };
 
-#endif  // IP_CAMERA_ROS2__IPCAM_ROS2_
+#endif  // IP_CAMERA_ROS2__IP_CAMERA_ROS2_HPP_

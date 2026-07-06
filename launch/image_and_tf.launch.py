@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-'''
-    Launches the ipcam_ros2 node.
-'''
+"""Launches the ipcam_ros2 node."""
+
 import os
 import xacro
 
@@ -12,6 +11,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
+
 
 def generate_launch_description():
     # Getting directories and launch-files
@@ -61,23 +61,23 @@ def generate_launch_description():
     )
     # Transform Publisher
     ipcam_tf_node = Node(
-            package='tf2_ros',
-            namespace = '',
-            executable='static_transform_publisher',
-            name = 'ipcam_tf',
-            arguments= ["0", "0", "0", "0", "0", "0", "map", "camera_base_link"]
-        )
+        package='tf2_ros',
+        namespace='',
+        executable='static_transform_publisher',
+        name='ipcam_tf',
+        arguments=['0', '0', '0', '0', '0', '0', 'map', 'camera_base_link']
+    )
     # Create the IP Cam node.
     ipcam_ros2_node = Node(
-        package = 'ip_camera_ros2',
-        namespace = '',
-        executable = 'ip_camera_ros2',
-        name = 'ip_camera_ros2',
+        package='ip_camera_ros2',
+        namespace='',
+        executable='ip_camera_ros2',
+        name='ip_camera_ros2',
         parameters=[params_file],
-        emulate_tty = True,
-        output='screen', 
+        emulate_tty=True,
+        output='screen',
         arguments=[
-            '--ros-args', 
+            '--ros-args',
             '--log-level', ['ip_camera_ros2:=', LaunchConfiguration('log-level')]]
     )
 

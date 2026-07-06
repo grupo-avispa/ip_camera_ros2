@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-'''
-    Launches the ip_camera_ros2 node.
-'''
+"""Launches the ip_camera_ros2 node."""
+
 import os
-import xacro
 
 from ament_index_python import get_package_share_directory
 
@@ -12,6 +10,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
+
 
 def generate_launch_description():
     # Getting directories and launch-files
@@ -33,27 +32,24 @@ def generate_launch_description():
         description='Logging level (info, debug, ...)'
     )
 
-    # Create the launch configuration variables:
-    use_sim_time = LaunchConfiguration('use_sim_time')
-
     # Map these variables to arguments: can be set from the command line or a default will be used
     use_sim_time_launch_arg = DeclareLaunchArgument(
         'use_sim_time',
         default_value='false',
         description='Use simulation (Gazebo) clock if true'
     )
-    
+
     # Prepare the ROS2 node.
     ipcam_ros2_node = Node(
-        package = 'ip_camera_ros2',
-        namespace = '',
-        executable = 'ip_camera_ros2',
-        name = 'ip_camera_ros2',
+        package='ip_camera_ros2',
+        namespace='',
+        executable='ip_camera_ros2',
+        name='ip_camera_ros2',
         parameters=[params_file],
-        emulate_tty = True,
-        output='screen', 
+        emulate_tty=True,
+        output='screen',
         arguments=[
-            '--ros-args', 
+            '--ros-args',
             '--log-level', ['ip_camera_ros2:=', LaunchConfiguration('log-level')]]
     )
 

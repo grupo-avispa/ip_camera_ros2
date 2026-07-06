@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  install-depth-anything:
-    name: Install IpCamera
+  build:
     runs-on: ubuntu-24.04
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7

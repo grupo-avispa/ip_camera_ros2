@@ -14,24 +14,9 @@ ip_camera_ros2:
     # Camera calibration info
     enable_cam_info: true # true enables camera info publishing
     # Paste here your camera calibration parameters following the format:
-    camera_matrix:
-      [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    camera_matrix: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     distortion_model: equidistant
     distortion_coefficients: [0.0, 0.0, 0.0, 0.0]
     rectification_matrix: [1., 0., 0., 0., 1., 0., 0., 0., 1.]
     projection_matrix:
-      [
-        1.0,
-        0.0,
-        1.0,
-        0.0,
-        1.0,
-        0.0,
-        1.0,
-        0.0,
-        1.0,
-        0.0,
-        1.0,
-        0.0
-      ]
-
+      [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0]

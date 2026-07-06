@@ -1,7 +1,7 @@
 # ip_camera_ros2
 ![ROS2](https://img.shields.io/badge/ros2-jazzy-blue?logo=ros&logoColor=white)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Build](https://github.com/grupo-avispa/depth_anything_v2_ros2/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/grupo-avispa/depth_anything_v2_ros2/actions/workflows/build.yml)
+[![Build](https://github.com/grupo-avispa/ip_camera_ros2/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/grupo-avispa/ip_camera_ros2/actions/workflows/build.yml)
 
 ## Overview
 This ROS2 package provides a generic interface for publishing RGB image from any IP camera. I also includes a static transform publisher and camera info publisher in case you need any of these applications.

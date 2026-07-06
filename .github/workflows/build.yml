@@ -7,6 +7,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   install-depth-anything:
@@ -14,13 +15,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v7
       - name: Setup ROS 2
-        uses: ros-tooling/setup-ros@0.7.16
+        uses: ros-tooling/setup-ros@0.7.19
         with:
           required-ros-distributions: jazzy
       - name: Build packages
-        uses: ros-tooling/action-ros-ci@0.4.7
+        uses: ros-tooling/action-ros-ci@0.4.8
         with:
           package-name: ip_camera_ros2
           target-ros2-distro: jazzy
@@ -33,4 +34,4 @@ jobs:
                 "mixin": ["coverage-pytest"]
               }
             }
-          skip-tests: true
+          skip-tests: false

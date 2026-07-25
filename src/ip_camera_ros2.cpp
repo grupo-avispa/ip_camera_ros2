@@ -177,6 +177,13 @@ void IpCameraRos2::update_params()
     rcl_interfaces::msg::ParameterDescriptor().set__description(
       "Frame rate for publishing images"));
   this->get_parameter("frame_rate", frame_rate_);
+  if (frame_rate_ < 1) {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "The parameter frame_rate must be a positive integer, got [%d]. Falling back to 1",
+      frame_rate_);
+    frame_rate_ = 1;
+  }
   RCLCPP_INFO(this->get_logger(), "The parameter frame_rate is set to: [%d]", frame_rate_);
 
   declare_parameter_if_not_declared(

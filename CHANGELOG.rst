@@ -22,6 +22,9 @@ Fixed
 - Fixed ``package.xml`` missing the ``image_transport`` and OpenCV (``libopencv-dev``)
   dependencies, which are required by ``CMakeLists.txt``/the C++ sources but were absent,
   breaking ``rosdep install`` on a clean checkout.
+- Fixed published ``CameraInfo.height``/``CameraInfo.width`` being set from
+  ``image_height``/``image_width`` (``-1`` when unset, wrapping to ``4294967295`` as
+  ``uint32``) instead of the dimensions of the actually published frame.
 
 Changed
 -------

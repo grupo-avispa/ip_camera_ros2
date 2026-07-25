@@ -89,6 +89,10 @@ void IpCameraRos2::capture_ipcam_image()
 
   if (enable_cam_info_ && correct_cam_info_) {
     cam_info_msg_.header.stamp = stamp;
+    // Always reflect the dimensions of the frame actually being published: they may
+    // differ from image_width_/image_height_ (unset, or clamped by the crop ROI check).
+    cam_info_msg_.height = static_cast<uint32_t>(local_frame.rows);
+    cam_info_msg_.width = static_cast<uint32_t>(local_frame.cols);
     cam_info_pub_->publish(cam_info_msg_);
   }
 
@@ -108,8 +112,8 @@ sensor_msgs::msg::CameraInfo IpCameraRos2::create_cam_info_msg(rclcpp::Time stam
   sensor_msgs::msg::CameraInfo cam_info_msg;
   cam_info_msg.header.frame_id = frame_;
   cam_info_msg.header.stamp = stamp;
-  cam_info_msg.height = image_height_;
-  cam_info_msg.width = image_width_;
+  // height/width are filled in per-message from the actually published frame, since they
+  // may differ from image_width_/image_height_ (unset, or clamped by the crop ROI check).
   cam_info_msg.distortion_model = distortion_model_;
   std::copy_n(k_.begin(), std::min(k_.size(), cam_info_msg.k.size()), cam_info_msg.k.begin());
   std::copy_n(p_.begin(), std::min(p_.size(), cam_info_msg.p.size()), cam_info_msg.p.begin());

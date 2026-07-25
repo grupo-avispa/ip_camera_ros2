@@ -45,6 +45,12 @@ Changed
   ``declare_and_get_array()`` helpers, removing repeated declare/get/log boilerplate and
   fixing copy-pasted parameter descriptions (e.g. ``image_height``/``image_width`` no
   longer describe a "Depth image").
+- Extracted the crop/resize transform (``ip_camera_ros2::apply_crop_or_resize()`` in
+  ``image_ops.hpp``/``.cpp``), the ``CameraInfo`` construction and calibration validation
+  (``ip_camera_ros2::build_camera_info()``/``is_calibration_valid()`` in
+  ``camera_info_builder.hpp``/``.cpp``), and the exponential backoff delay computation
+  (``RTSPCapturer::next_retry_delay()``) out of ``IpCameraRos2``/``RTSPCapturer`` and into
+  small, ROS-node-independent, unit-testable functions.
 
 Performance
 -----------

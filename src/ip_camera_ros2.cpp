@@ -16,12 +16,12 @@
 #include "ip_camera_ros2/ip_camera_ros2.hpp"
 
 // C++
-#include <algorithm>
 #include <chrono>
 
 // ROS 2
 #include "sensor_msgs/image_encodings.hpp"
 
+#include "ip_camera_ros2/image_ops.hpp"
 #include "ip_camera_ros2/rtsp_capturer.hpp"
 
 IpCameraRos2::IpCameraRos2()
@@ -44,7 +44,8 @@ IpCameraRos2::IpCameraRos2()
     cb_group_);
 
   if (enable_cam_info_ && correct_cam_info_) {
-    cam_info_msg_ = create_cam_info_msg(this->get_clock()->now());
+    cam_info_msg_ = ip_camera_ros2::build_camera_info(
+      calibration_, frame_, this->get_clock()->now());
     cam_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>(cam_info_topic_, 10);
   }
 }
@@ -65,21 +66,16 @@ void IpCameraRos2::capture_ipcam_image()
   }
 
   // Crop or resize
-  if (image_width_ > 0 && image_height_ > 0) {
-    if (offset_x_ >= 0 && offset_y_ >= 0) {
-      const cv::Rect frame_rect(0, 0, local_frame.cols, local_frame.rows);
-      const cv::Rect roi = cv::Rect(offset_x_, offset_y_, image_width_, image_height_) & frame_rect;
-      if (roi.width == 0 || roi.height == 0) {
-        RCLCPP_WARN_THROTTLE(
-          this->get_logger(), *this->get_clock(), 5000,
-          "Crop ROI (%d,%d,%d,%d) is outside the frame bounds (%dx%d); skipping this frame",
-          offset_x_, offset_y_, image_width_, image_height_, local_frame.cols, local_frame.rows);
-        return;
-      }
-      local_frame = local_frame(roi).clone();
-    } else {
-      cv::resize(local_frame, local_frame, cv::Size(image_width_, image_height_));
-    }
+  const int orig_cols = local_frame.cols;
+  const int orig_rows = local_frame.rows;
+  local_frame = ip_camera_ros2::apply_crop_or_resize(
+    local_frame, ip_camera_ros2::CropRegion{image_width_, image_height_, offset_x_, offset_y_});
+  if (local_frame.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "Crop ROI (%d,%d,%d,%d) is outside the frame bounds (%dx%d); skipping this frame",
+      offset_x_, offset_y_, image_width_, image_height_, orig_cols, orig_rows);
+    return;
   }
 
   // Stamp and publish
@@ -107,21 +103,6 @@ cv_bridge::CvImage IpCameraRos2::initialize_image_msg()
   image_msg.header.frame_id = frame_;
   image_msg.encoding = sensor_msgs::image_encodings::BGR8;
   return image_msg;
-}
-
-sensor_msgs::msg::CameraInfo IpCameraRos2::create_cam_info_msg(rclcpp::Time stamp)
-{
-  sensor_msgs::msg::CameraInfo cam_info_msg;
-  cam_info_msg.header.frame_id = frame_;
-  cam_info_msg.header.stamp = stamp;
-  // height/width are filled in per-message from the actually published frame, since they
-  // may differ from image_width_/image_height_ (unset, or clamped by the crop ROI check).
-  cam_info_msg.distortion_model = distortion_model_;
-  std::copy_n(k_.begin(), std::min(k_.size(), cam_info_msg.k.size()), cam_info_msg.k.begin());
-  std::copy_n(p_.begin(), std::min(p_.size(), cam_info_msg.p.size()), cam_info_msg.p.begin());
-  std::copy_n(r_.begin(), std::min(r_.size(), cam_info_msg.r.size()), cam_info_msg.r.begin());
-  cam_info_msg.d = d_;
-  return cam_info_msg;
 }
 
 void IpCameraRos2::update_params()
@@ -182,23 +163,24 @@ void IpCameraRos2::update_params()
   if (enable_cam_info_) {
     declare_and_get(
       "distortion_model", std::string(),
-      "Camera distortion model, e.g. 'plumb_bob' or 'equidistant'", distortion_model_);
+      "Camera distortion model, e.g. 'plumb_bob' or 'equidistant'", calibration_.distortion_model);
 
     declare_and_get_array(
-      "camera_matrix", "3x3 camera intrinsic matrix K (row-major, 9 elements)", k_);
+      "camera_matrix", "3x3 camera intrinsic matrix K (row-major, 9 elements)", calibration_.k);
     declare_and_get_array(
       "distortion_coefficients", "Distortion coefficients D (size depends on distortion_model)",
-      d_);
+      calibration_.d);
     declare_and_get_array(
-      "rectification_matrix", "3x3 rectification matrix R (row-major, 9 elements)", r_);
+      "rectification_matrix", "3x3 rectification matrix R (row-major, 9 elements)",
+      calibration_.r);
     declare_and_get_array(
-      "projection_matrix", "3x4 projection matrix P (row-major, 12 elements)", p_);
+      "projection_matrix", "3x4 projection matrix P (row-major, 12 elements)", calibration_.p);
 
-    if (k_.size() != 9 || r_.size() != 9 || p_.size() != 12) {
+    correct_cam_info_ = ip_camera_ros2::is_calibration_valid(calibration_);
+    if (!correct_cam_info_) {
       RCLCPP_WARN(this->get_logger(), "Calibration matrix sizes are incorrect");
     } else {
       RCLCPP_INFO(this->get_logger(), "Calibration camera values loaded correctly");
-      correct_cam_info_ = true;
     }
   }
 }

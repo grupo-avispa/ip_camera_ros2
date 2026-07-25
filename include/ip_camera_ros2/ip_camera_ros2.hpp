@@ -32,6 +32,9 @@
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
+// Package
+#include "ip_camera_ros2/camera_info_builder.hpp"
+
 // Forward declarations
 class RTSPCapturer;
 
@@ -174,8 +177,7 @@ private:
   std::string frame_;
 
   bool enable_cam_info_{false};
-  std::string distortion_model_;
-  std::vector<double> k_, d_, r_, p_;
+  ip_camera_ros2::CalibrationParams calibration_;
   bool correct_cam_info_{false};
 
   rclcpp::CallbackGroup::SharedPtr cb_group_;
@@ -197,13 +199,6 @@ private:
    * @return Pre-filled CvImage ready for stamping.
    */
   cv_bridge::CvImage initialize_image_msg();
-
-  /**
-   * @brief Build a CameraInfo message from current calibration parameters.
-   * @param stamp Timestamp for the message header.
-   * @return Populated CameraInfo message.
-   */
-  sensor_msgs::msg::CameraInfo create_cam_info_msg(rclcpp::Time stamp);
 
   /**
    * @brief Declare and read all ROS2 node parameters.

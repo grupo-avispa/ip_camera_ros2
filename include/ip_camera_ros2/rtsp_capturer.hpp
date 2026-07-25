@@ -68,6 +68,17 @@ public:
    */
   void stop();
 
+  /**
+   * @brief Compute the next exponential backoff delay, capped at MAX_RETRY_DELAY_S.
+   *
+   * Pure function exposed for unit testing; used internally by run() between
+   * reconnection attempts.
+   *
+   * @param current_delay_s Current retry delay, in seconds.
+   * @return The next delay: `min(current_delay_s * 2, MAX_RETRY_DELAY_S)`.
+   */
+  static int next_retry_delay(int current_delay_s);
+
 private:
   /**
    * @brief Open the RTSP stream with reliable transport settings.

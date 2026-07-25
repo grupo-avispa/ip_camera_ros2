@@ -14,6 +14,7 @@
 // limitations under the License.
 
 // C++
+#include <algorithm>
 #include <cstdlib>
 #include <thread>
 
@@ -55,6 +56,11 @@ bool RTSPCapturer::connect()
   return true;
 }
 
+int RTSPCapturer::next_retry_delay(int current_delay_s)
+{
+  return std::min(current_delay_s * 2, MAX_RETRY_DELAY_S);
+}
+
 void RTSPCapturer::stop()
 {
   running_ = false;
@@ -84,8 +90,7 @@ void RTSPCapturer::run()
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
-        // Exponential backoff capped at MAX_RETRY_DELAY_S
-        retry_delay_s = std::min(retry_delay_s * 2, MAX_RETRY_DELAY_S);
+        retry_delay_s = next_retry_delay(retry_delay_s);
         continue;
       }
 

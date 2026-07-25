@@ -89,3 +89,22 @@ Architecture
   atomically under the standard ``<image_topic>/camera_info`` sibling naming that
   calibration/rectification tools expect. The separately-configurable
   ``cam_info_topic`` parameter is removed as a result.
+- Converted ``IpCameraRos2`` from ``rclcpp::Node`` to ``rclcpp_lifecycle::LifecycleNode``:
+  parameters are read and publishers created in ``on_configure()``; the RTSP stream is
+  only connected (``RTSPCapturer`` + producer thread created) in ``on_activate()`` and
+  disconnected in ``on_deactivate()``; ``on_cleanup()``/``on_shutdown()`` release the
+  remaining state. This lets the node be started without connecting, and orchestrated
+  by external tooling (``ros2 lifecycle set``, a lifecycle manager, Nav2-style
+  bringup), addressing [M3] from the analysis.
+
+  As a consequence, ``image_transport`` is no longer used: it does not support
+  ``LifecycleNode`` on ROS 2 Jazzy (``ros-perception/image_common#108``, only fixed for
+  Rolling via ``#352`` in November 2025). Image and CameraInfo are now published via
+  plain ``rclcpp_lifecycle::LifecyclePublisher``, on raw topics rather than through
+  image_transport's compressed/theora transport negotiation; the standard
+  ``<image_topic>/camera_info`` sibling naming is preserved via the new
+  ``ip_camera_ros2::derive_camera_info_topic()`` (``topic_utils.hpp``/``.cpp``).
+- Both launch files now launch ``ip_camera_ros2`` as a ``launch_ros.actions.LifecycleNode``
+  and add an ``autostart`` launch argument (default ``true``) that automatically
+  configures and activates it on startup, matching the previous non-lifecycle behaviour
+  by default; pass ``autostart:=false`` to drive the lifecycle manually instead.

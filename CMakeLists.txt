@@ -10,10 +10,10 @@ endif()
 # ###############################################
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(image_transport REQUIRED)
 
 # ##########
 # # Build ##
@@ -31,15 +31,16 @@ add_executable(${PROJECT_NAME}
     src/frame_buffer.cpp
     src/image_ops.cpp
     src/camera_info_builder.cpp
+    src/topic_utils.cpp
     src/main.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}
     rclcpp
+    rclcpp_lifecycle
     sensor_msgs
     cv_bridge
     OpenCV
-    image_transport
 )
 
 # ############

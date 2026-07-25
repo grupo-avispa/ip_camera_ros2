@@ -27,8 +27,9 @@
 
 // ROS 2
 #include "cv_bridge/cv_bridge.hpp"
-#include "image_transport/image_transport.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
@@ -39,25 +40,60 @@
 // Forward declarations
 class RTSPCapturer;
 
+using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+
 /**
- * @brief ROS2 node that publishes frames received from an IP / RTSP camera.
+ * @brief ROS2 lifecycle node that publishes frames received from an IP / RTSP camera.
  *
- * Owns an RTSPCapturer, which fills a FrameBuffer from a dedicated producer
- * thread; this node's timer callback dequeues the latest frame and publishes
- * it as sensor_msgs/Image (and optionally CameraInfo).
+ * The RTSP stream is only connected while active: on_activate() creates the
+ * RTSPCapturer and starts its producer thread (which fills a FrameBuffer), and
+ * on_deactivate() stops and destroys them. The publishing timer's callback dequeues
+ * the latest frame and publishes it as sensor_msgs/Image (and optionally CameraInfo).
+ *
+ * image_transport is intentionally not used: it does not support LifecycleNode on
+ * ROS 2 Jazzy (see ros-perception/image_common#108, fixed for Rolling only in #352),
+ * so plain rclcpp_lifecycle::LifecyclePublisher is used instead.
  */
-class IpCameraRos2 : public rclcpp::Node
+class IpCameraRos2 : public rclcpp_lifecycle::LifecycleNode
 {
 public:
   /**
-   * @brief Construct and configure the IpCameraRos2 node, and start the capture thread.
+   * @brief Construct the IpCameraRos2 node. Does not read parameters or open the
+   *        stream yet; see on_configure()/on_activate().
+   *
+   * @param options Node options.
    */
-  IpCameraRos2();
+  explicit IpCameraRos2(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
   /**
-   * @brief Stop the capture thread and destroy the node.
+   * @brief Stop the capture thread (if still running) and destroy the node.
    */
   ~IpCameraRos2();
+
+  /**
+   * @brief Read parameters and create the publishers.
+   */
+  CallbackReturn on_configure(const rclcpp_lifecycle::State & state) override;
+
+  /**
+   * @brief Activate the publishers, open the RTSP stream and start publishing.
+   */
+  CallbackReturn on_activate(const rclcpp_lifecycle::State & state) override;
+
+  /**
+   * @brief Stop publishing, close the RTSP stream and deactivate the publishers.
+   */
+  CallbackReturn on_deactivate(const rclcpp_lifecycle::State & state) override;
+
+  /**
+   * @brief Release the publishers and parameter-derived state.
+   */
+  CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state) override;
+
+  /**
+   * @brief Ensure the capture thread and publishers are released from any state.
+   */
+  CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state) override;
 
 private:
   /// RTSP stream URL
@@ -72,9 +108,14 @@ private:
   /// Shared hand-off point between the capture thread and the publishing timer
   std::unique_ptr<ip_camera_ros2::FrameBuffer> frame_buffer_;
 
-  /// Producer that fills frame_buffer_ from a dedicated thread
+  /// Producer that fills frame_buffer_ from a dedicated thread; only alive while active
   std::unique_ptr<RTSPCapturer> capturer_;
   std::thread capturer_thread_;
+
+  /**
+   * @brief Stop and join the capture thread, if any is running.
+   */
+  void stop_capture();
 
   /**
    * @brief Declares static ROS2 parameter and sets it to a given value if it was not already declared.
@@ -185,12 +226,11 @@ private:
   cv_bridge::CvImage image_msg_;
   sensor_msgs::msg::CameraInfo cam_info_msg_;
 
-  // Exactly one of these is advertised, chosen by `enable_cam_info_ && correct_cam_info_`
-  // in the constructor: CameraPublisher bundles image + CameraInfo atomically under the
-  // standard `<image_topic>/camera_info` sibling naming that calibration/rectification
-  // tools expect, but requires both messages on every publish.
-  image_transport::Publisher image_pub_;
-  image_transport::CameraPublisher cam_pub_;
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Image>> image_pub_;
+
+  /// Only created when enable_cam_info_ && correct_cam_info_
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::CameraInfo>>
+    cam_info_pub_;
 
   /**
    * @brief Timer callback that dequeues the latest frame and publishes it.

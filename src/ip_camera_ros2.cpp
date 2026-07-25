@@ -23,9 +23,19 @@
 
 #include "ip_camera_ros2/image_ops.hpp"
 #include "ip_camera_ros2/rtsp_capturer.hpp"
+#include "ip_camera_ros2/topic_utils.hpp"
 
-IpCameraRos2::IpCameraRos2()
-: Node("ip_camera_ros2")
+IpCameraRos2::IpCameraRos2(const rclcpp::NodeOptions & options)
+: rclcpp_lifecycle::LifecycleNode("ip_camera_ros2", options)
+{
+}
+
+IpCameraRos2::~IpCameraRos2()
+{
+  stop_capture();
+}
+
+CallbackReturn IpCameraRos2::on_configure(const rclcpp_lifecycle::State &)
 {
   update_params();
 
@@ -33,44 +43,97 @@ IpCameraRos2::IpCameraRos2()
 
   cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-  // CameraPublisher bundles image + CameraInfo atomically under the standard
-  // "<image_topic>/camera_info" sibling naming; plain Publisher is used when no valid
-  // calibration is available, since CameraPublisher always requires both messages.
+  image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(image_topic_, 10);
+
   if (enable_cam_info_ && correct_cam_info_) {
     cam_info_msg_ = ip_camera_ros2::build_camera_info(
       calibration_, frame_, this->get_clock()->now());
-    cam_pub_ = image_transport::create_camera_publisher(this, image_topic_);
-  } else {
-    image_pub_ = image_transport::create_publisher(this, image_topic_);
+    const std::string cam_info_topic = ip_camera_ros2::derive_camera_info_topic(image_topic_);
+    cam_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>(cam_info_topic, 10);
   }
+
+  frame_buffer_ = std::make_unique<ip_camera_ros2::FrameBuffer>(buffer_size_);
+
+  RCLCPP_INFO(this->get_logger(), "Configured %s node", this->get_name());
+  return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn IpCameraRos2::on_activate(const rclcpp_lifecycle::State & state)
+{
+  // Activates image_pub_/cam_info_pub_, registered as managed entities by create_publisher().
+  LifecycleNode::on_activate(state);
 
   const unsigned int frame_period_ms = static_cast<unsigned int>(1000 / frame_rate_);
   RCLCPP_INFO(this->get_logger(), "Frame period set to: %u ms", frame_period_ms);
-
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(frame_period_ms),
     std::bind(&IpCameraRos2::capture_ipcam_image, this),
     cb_group_);
 
-  // Own the frame buffer and the capturer, and run the latter in a dedicated producer
-  // thread: this node is the single owner of both, instead of exposing them as public
-  // fields for main() to wire up externally.
-  frame_buffer_ = std::make_unique<ip_camera_ros2::FrameBuffer>(buffer_size_);
+  // Only connect to the RTSP stream once active, and release it on deactivation.
   capturer_ = std::make_unique<RTSPCapturer>(url_, *frame_buffer_, this->get_logger());
   capturer_thread_ = std::thread([this]() {
       capturer_->run();
     });
+
+  RCLCPP_INFO(this->get_logger(), "Activating %s node", this->get_name());
+  return CallbackReturn::SUCCESS;
 }
 
-IpCameraRos2::~IpCameraRos2()
+CallbackReturn IpCameraRos2::on_deactivate(const rclcpp_lifecycle::State & state)
 {
-  // Stop the producer thread before the automatic destruction of capturer_/frame_buffer_
-  // (in reverse declaration order) runs; std::thread's destructor would otherwise call
-  // std::terminate() on a still-joinable thread.
-  capturer_->stop();
+  stop_capture();
+
+  if (timer_) {
+    timer_->cancel();
+    timer_.reset();
+  }
+
+  // Deactivates image_pub_/cam_info_pub_: any straggling publish() becomes a safe no-op.
+  LifecycleNode::on_deactivate(state);
+
+  RCLCPP_INFO(this->get_logger(), "Deactivating %s node", this->get_name());
+  return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn IpCameraRos2::on_cleanup(const rclcpp_lifecycle::State &)
+{
+  frame_buffer_.reset();
+  image_pub_.reset();
+  cam_info_pub_.reset();
+  cb_group_.reset();
+
+  RCLCPP_INFO(this->get_logger(), "Cleaning up %s node", this->get_name());
+  return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn IpCameraRos2::on_shutdown(const rclcpp_lifecycle::State & state)
+{
+  // Shutdown can be requested from any state, so tear down defensively.
+  stop_capture();
+  if (timer_) {
+    timer_->cancel();
+    timer_.reset();
+  }
+  frame_buffer_.reset();
+  image_pub_.reset();
+  cam_info_pub_.reset();
+
+  RCLCPP_INFO(
+    this->get_logger(), "Shutting down %s node from state %s", this->get_name(),
+    state.label().c_str());
+  return CallbackReturn::SUCCESS;
+}
+
+void IpCameraRos2::stop_capture()
+{
+  if (capturer_) {
+    capturer_->stop();
+  }
   if (capturer_thread_.joinable()) {
     capturer_thread_.join();
   }
+  capturer_.reset();
 }
 
 void IpCameraRos2::capture_ipcam_image()
@@ -99,18 +162,19 @@ void IpCameraRos2::capture_ipcam_image()
   image_msg_.header.stamp = stamp;
   image_msg_.image = local_frame;
 
-  // Publish by shared_ptr instead of by value: avoids an extra Image copy and allows
-  // zero-copy delivery to intra-process subscribers.
+  // Fill and publish by unique_ptr instead of by value: avoids an extra Image copy and
+  // allows zero-copy delivery to intra-process subscribers.
+  auto image_msg = std::make_unique<sensor_msgs::msg::Image>();
+  image_msg_.toImageMsg(*image_msg);
+  image_pub_->publish(std::move(image_msg));
+
   if (enable_cam_info_ && correct_cam_info_) {
     cam_info_msg_.header.stamp = stamp;
     // Always reflect the dimensions of the frame actually being published: they may
     // differ from image_width_/image_height_ (unset, or clamped by the crop ROI check).
     cam_info_msg_.height = static_cast<uint32_t>(local_frame.rows);
     cam_info_msg_.width = static_cast<uint32_t>(local_frame.cols);
-    cam_pub_.publish(
-      image_msg_.toImageMsg(), std::make_shared<sensor_msgs::msg::CameraInfo>(cam_info_msg_));
-  } else {
-    image_pub_.publish(image_msg_.toImageMsg());
+    cam_info_pub_->publish(std::make_unique<sensor_msgs::msg::CameraInfo>(cam_info_msg_));
   }
 }
 

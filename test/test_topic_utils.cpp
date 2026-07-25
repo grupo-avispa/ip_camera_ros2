@@ -13,19 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "ip_camera_ros2/ip_camera_ros2.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include "gtest/gtest.h"
+#include "ip_camera_ros2/topic_utils.hpp"
+
+TEST(DeriveCameraInfoTopic, RootTopic) {
+  EXPECT_EQ(ip_camera_ros2::derive_camera_info_topic("/image"), "/camera_info");
+}
+
+TEST(DeriveCameraInfoTopic, NamespacedTopic) {
+  EXPECT_EQ(
+    ip_camera_ros2::derive_camera_info_topic("/camera/image_raw"), "/camera/camera_info");
+}
+
+TEST(DeriveCameraInfoTopic, RelativeTopicWithoutSlash) {
+  EXPECT_EQ(ip_camera_ros2::derive_camera_info_topic("image_raw"), "/camera_info");
+}
 
 int main(int argc, char ** argv)
 {
-  rclcpp::init(argc, argv);
-
-  // IpCameraRos2 is a lifecycle node: it stays unconfigured (RTSP stream untouched)
-  // until externally transitioned to "configure"/"activate" (e.g. via the launch
-  // file's autostart, or `ros2 lifecycle set`).
-  auto node = std::make_shared<IpCameraRos2>();
-  rclcpp::spin(node->get_node_base_interface());  // Blocks until rclcpp::shutdown()
-
-  rclcpp::shutdown();
-  return 0;
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

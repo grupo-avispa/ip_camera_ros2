@@ -13,19 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "ip_camera_ros2/ip_camera_ros2.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include "ip_camera_ros2/topic_utils.hpp"
 
-int main(int argc, char ** argv)
+namespace ip_camera_ros2
 {
-  rclcpp::init(argc, argv);
 
-  // IpCameraRos2 is a lifecycle node: it stays unconfigured (RTSP stream untouched)
-  // until externally transitioned to "configure"/"activate" (e.g. via the launch
-  // file's autostart, or `ros2 lifecycle set`).
-  auto node = std::make_shared<IpCameraRos2>();
-  rclcpp::spin(node->get_node_base_interface());  // Blocks until rclcpp::shutdown()
-
-  rclcpp::shutdown();
-  return 0;
+std::string derive_camera_info_topic(const std::string & image_topic)
+{
+  const auto last_slash = image_topic.find_last_of('/');
+  const std::string parent =
+    (last_slash == std::string::npos) ? std::string() : image_topic.substr(0, last_slash);
+  return parent + "/camera_info";
 }
+
+}  // namespace ip_camera_ros2

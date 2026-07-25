@@ -49,11 +49,22 @@ Connect your ip camera and set up the url in the `params.yaml` file under `confi
 ```bash
 ros2 launch ip_camera_ros2 image_and_tf.launch.py
 ```
+### Lifecycle
+
+`ip_camera_ros2` is a [managed lifecycle node](https://design.ros2.org/articles/node_lifecycle.html): the RTSP stream is only opened once the node is activated, and closed again on deactivation. Both launch files pass `autostart:=true` by default, which automatically configures and activates the node on startup, so the commands above work out of the box.
+
+To drive the lifecycle manually (e.g. to orchestrate startup alongside other nodes with a lifecycle manager), disable autostart and use the standard lifecycle CLI/services:
+```bash
+ros2 launch ip_camera_ros2 image.launch.py autostart:=false
+ros2 lifecycle set /ip_camera_ros2 configure
+ros2 lifecycle set /ip_camera_ros2 activate
+```
+
 ### Nodes
 
 #### ip_camera_ros2
 
-This node publishes image from the ip camera and camera information (if this option is enabled).
+This lifecycle node publishes image from the ip camera and camera information (if this option is enabled).
 
 #### camera_state_publisher
 State publisher node from robot_state_publisher package.
@@ -70,7 +81,7 @@ Static transform publisher from tf2_ros package.
 
 * **`camera_info`** ([sensor_msgs/CameraInfo])
 
-	Defined meta information for a camera. Published only when `enable_cam_info` is true, on the standard sibling topic derived from `image_topic` via `image_transport::CameraPublisher` (e.g. `/image` -> `/camera_info`).
+	Defined meta information for a camera. Published only when `enable_cam_info` is true, on the standard sibling topic derived from `image_topic` (e.g. `/image` -> `/camera_info`).
 
 * **`joint_states`**
 * **`robot_description`**

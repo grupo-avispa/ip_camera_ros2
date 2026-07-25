@@ -48,21 +48,34 @@ IpCameraRos2::IpCameraRos2()
       calibration_, frame_, this->get_clock()->now());
     cam_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>(cam_info_topic_, 10);
   }
+
+  // Own the frame buffer and the capturer, and run the latter in a dedicated producer
+  // thread: this node is the single owner of both, instead of exposing them as public
+  // fields for main() to wire up externally.
+  frame_buffer_ = std::make_unique<ip_camera_ros2::FrameBuffer>(buffer_size_);
+  capturer_ = std::make_unique<RTSPCapturer>(url_, *frame_buffer_, this->get_logger());
+  capturer_thread_ = std::thread([this]() {
+      capturer_->run();
+    });
+}
+
+IpCameraRos2::~IpCameraRos2()
+{
+  // Stop the producer thread before the automatic destruction of capturer_/frame_buffer_
+  // (in reverse declaration order) runs; std::thread's destructor would otherwise call
+  // std::terminate() on a still-joinable thread.
+  capturer_->stop();
+  if (capturer_thread_.joinable()) {
+    capturer_thread_.join();
+  }
 }
 
 void IpCameraRos2::capture_ipcam_image()
 {
   cv::Mat local_frame;
-
-  // Consumer: grab the latest frame and discard any stale backlog
-  {
-    std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (frame_buffer_.empty()) {
-      RCLCPP_DEBUG(this->get_logger(), "No frames available in buffer");
-      return;
-    }
-    local_frame = std::move(frame_buffer_.back());
-    frame_buffer_.clear();
+  if (!frame_buffer_->pop_latest(local_frame)) {
+    RCLCPP_DEBUG(this->get_logger(), "No frames available in buffer");
+    return;
   }
 
   // Crop or resize

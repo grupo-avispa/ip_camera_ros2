@@ -65,5 +65,17 @@ Added
 - Added a ``test/`` gtest suite (``ament_add_gtest``): ``test_image_ops`` covers ROI
   clamping and the crop/resize transform (including the [C1] out-of-bounds case),
   ``test_camera_info_builder`` covers calibration validation and ``CameraInfo``
-  construction (including the [C3] oversized-vector case), and
-  ``test_rtsp_capturer_backoff`` covers the exponential backoff sequence and its cap.
+  construction (including the [C3] oversized-vector case), ``test_rtsp_capturer_backoff``
+  covers the exponential backoff sequence and its cap, and ``test_frame_buffer`` covers
+  the new ``FrameBuffer`` class (below).
+
+Architecture
+------------
+- Introduced ``ip_camera_ros2::FrameBuffer`` (``frame_buffer.hpp``/``.cpp``), replacing
+  the raw ``std::deque<cv::Mat>``/``std::mutex`` pair that used to be public fields on
+  ``IpCameraRos2`` purely so ``main()`` could wire up ``RTSPCapturer`` externally.
+- ``IpCameraRos2`` now creates and owns its ``RTSPCapturer`` and producer thread
+  internally (started in its constructor, stopped in its destructor); ``main.cpp`` is
+  reduced to ``rclcpp::init`` + construct node + ``spin`` + ``rclcpp::shutdown``.
+- ``RTSPCapturer`` takes a ``FrameBuffer &`` instead of a raw ``deque``/``mutex``/
+  ``buffer_size`` triple.

@@ -28,6 +28,7 @@ include_directories(
 add_executable(${PROJECT_NAME}
     src/ip_camera_ros2.cpp
     src/rtsp_capturer.cpp
+    src/frame_buffer.cpp
     src/image_ops.cpp
     src/camera_info_builder.cpp
     src/main.cpp

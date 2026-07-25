@@ -17,10 +17,10 @@
 #define IP_CAMERA_ROS2__IP_CAMERA_ROS2_HPP_
 
 // C++
-#include <deque>
 #include <ios>
-#include <mutex>
+#include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "opencv2/opencv.hpp"
@@ -34,6 +34,7 @@
 
 // Package
 #include "ip_camera_ros2/camera_info_builder.hpp"
+#include "ip_camera_ros2/frame_buffer.hpp"
 
 // Forward declarations
 class RTSPCapturer;
@@ -41,41 +42,40 @@ class RTSPCapturer;
 /**
  * @brief ROS2 node that publishes frames received from an IP / RTSP camera.
  *
- * Works in tandem with RTSPCapturer: the capturer fills a shared frame buffer
- * from a dedicated thread, and this node's timer callback dequeues the latest
- * frame and publishes it as sensor_msgs/Image (and optionally CameraInfo).
+ * Owns an RTSPCapturer, which fills a FrameBuffer from a dedicated producer
+ * thread; this node's timer callback dequeues the latest frame and publishes
+ * it as sensor_msgs/Image (and optionally CameraInfo).
  */
 class IpCameraRos2 : public rclcpp::Node
 {
 public:
   /**
-   * @brief Construct and configure the IpCameraRos2 node.
+   * @brief Construct and configure the IpCameraRos2 node, and start the capture thread.
    */
   IpCameraRos2();
 
   /**
-   * @brief Destructor.
+   * @brief Stop the capture thread and destroy the node.
    */
-  ~IpCameraRos2() = default;
+  ~IpCameraRos2();
 
-  // ---- Public fields accessed by main() to construct RTSPCapturer ----
-
+private:
   /// RTSP stream URL
   std::string url_;
-
-  /// Shared frame buffer for the producer-consumer pattern
-  std::deque<cv::Mat> frame_buffer_;
-
-  /// Mutex protecting frame_buffer_
-  std::mutex buffer_mutex_;
 
   /// Target publishing frame rate (fps)
   int frame_rate_;
 
-  /// Maximum number of frames held in the buffer
+  /// Maximum number of frames held in frame_buffer_
   size_t buffer_size_;
 
-private:
+  /// Shared hand-off point between the capture thread and the publishing timer
+  std::unique_ptr<ip_camera_ros2::FrameBuffer> frame_buffer_;
+
+  /// Producer that fills frame_buffer_ from a dedicated thread
+  std::unique_ptr<RTSPCapturer> capturer_;
+  std::thread capturer_thread_;
+
   /**
    * @brief Declares static ROS2 parameter and sets it to a given value if it was not already declared.
    *

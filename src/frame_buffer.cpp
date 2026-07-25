@@ -13,21 +13,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "ip_camera_ros2/ip_camera_ros2.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include "ip_camera_ros2/frame_buffer.hpp"
 
-int main(int argc, char ** argv)
+#include <utility>
+
+namespace ip_camera_ros2
 {
-  rclcpp::init(argc, argv);
 
-  // IpCameraRos2 owns the RTSPCapturer and its producer thread; construction starts
-  // capturing, and its destructor stops the thread before the node is torn down.
-  rclcpp::executors::SingleThreadedExecutor exe;
-  auto node = std::make_shared<IpCameraRos2>();
-  exe.add_node(node);
-
-  exe.spin();  // Blocks until rclcpp::shutdown() (e.g. Ctrl+C)
-
-  rclcpp::shutdown();
-  return 0;
+FrameBuffer::FrameBuffer(size_t max_size)
+: max_size_(max_size)
+{
 }
+
+void FrameBuffer::push(cv::Mat frame)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (frames_.size() >= max_size_) {
+    frames_.pop_front();  // O(1) removal of oldest frame
+  }
+  frames_.push_back(std::move(frame));
+}
+
+bool FrameBuffer::pop_latest(cv::Mat & out)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (frames_.empty()) {
+    return false;
+  }
+  out = std::move(frames_.back());
+  frames_.clear();
+  return true;
+}
+
+}  // namespace ip_camera_ros2

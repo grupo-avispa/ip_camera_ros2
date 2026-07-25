@@ -22,12 +22,9 @@
 
 RTSPCapturer::RTSPCapturer(
   const std::string & url,
-  std::deque<cv::Mat> & frame_buffer,
-  std::mutex & buffer_mutex,
-  size_t buffer_size,
+  ip_camera_ros2::FrameBuffer & frame_buffer,
   rclcpp::Logger logger)
-: url_(url), frames_(frame_buffer), buffer_mutex_(buffer_mutex),
-  buffer_size_(buffer_size), logger_(logger)
+: url_(url), frame_buffer_(frame_buffer), logger_(logger)
 {
 }
 
@@ -130,14 +127,7 @@ void RTSPCapturer::run()
       continue;
     }
 
-    // Push to shared buffer (producer side)
-    {
-      std::lock_guard<std::mutex> lock(buffer_mutex_);
-      if (frames_.size() >= buffer_size_) {
-        frames_.pop_front();  // O(1) removal of oldest frame
-      }
-      frames_.push_back(std::move(frame));
-    }
+    frame_buffer_.push(std::move(frame));
   }
 
   cap_.release();

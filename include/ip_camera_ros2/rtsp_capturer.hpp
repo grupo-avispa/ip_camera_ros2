@@ -18,12 +18,12 @@
 
 // C++
 #include <atomic>
-#include <deque>
-#include <mutex>
 #include <string>
 
 #include "opencv2/opencv.hpp"
 #include "rclcpp/rclcpp.hpp"
+
+#include "ip_camera_ros2/frame_buffer.hpp"
 
 /**
  * @brief Captures frames from an RTSP stream in a dedicated producer thread.
@@ -39,15 +39,11 @@ public:
    *
    * @param url          RTSP stream URL.
    * @param frame_buffer Shared frame buffer (owned by IpCameraRos2).
-   * @param buffer_mutex Mutex protecting the shared buffer.
-   * @param buffer_size  Maximum number of frames to keep in the buffer.
    * @param logger       ROS2 logger for diagnostics.
    */
   RTSPCapturer(
     const std::string & url,
-    std::deque<cv::Mat> & frame_buffer,
-    std::mutex & buffer_mutex,
-    size_t buffer_size,
+    ip_camera_ros2::FrameBuffer & frame_buffer,
     rclcpp::Logger logger);
 
   /**
@@ -91,9 +87,7 @@ private:
   bool connect();
 
   std::string url_;
-  std::deque<cv::Mat> & frames_;
-  std::mutex & buffer_mutex_;
-  size_t buffer_size_;
+  ip_camera_ros2::FrameBuffer & frame_buffer_;
   rclcpp::Logger logger_;
   cv::VideoCapture cap_;
   std::atomic<bool> running_{false};

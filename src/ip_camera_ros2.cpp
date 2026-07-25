@@ -96,7 +96,9 @@ void IpCameraRos2::capture_ipcam_image()
     cam_info_pub_->publish(cam_info_msg_);
   }
 
-  image_pub_.publish(*image_msg_.toImageMsg());
+  // Publish by shared_ptr instead of by value: avoids an extra Image copy and allows
+  // zero-copy delivery to intra-process subscribers.
+  image_pub_.publish(image_msg_.toImageMsg());
 }
 
 cv_bridge::CvImage IpCameraRos2::initialize_image_msg()

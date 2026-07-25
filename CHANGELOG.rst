@@ -50,3 +50,6 @@ Performance
 -----------
 - Added a short interruptible sleep in ``RTSPCapturer::run()`` on transient
   ``grab()``/empty-frame failures to avoid a busy-wait loop pegging a CPU core.
+- Publish images via the ``sensor_msgs::msg::Image::SharedPtr`` overload of
+  ``image_transport::Publisher::publish()`` instead of dereferencing and passing by
+  value, avoiding an extra copy per frame and enabling zero-copy intra-process delivery.

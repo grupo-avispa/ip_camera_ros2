@@ -93,6 +93,9 @@ private:
 
   /// Consecutive grab failures before forcing a full reconnection
   static constexpr int MAX_GRAB_FAILURES = 5;
+
+  /// Pause applied between retries on a failed grab()/empty frame to avoid a busy-wait
+  static constexpr int GRAB_FAILURE_SLEEP_MS = 10;
 };
 
 #endif  // IP_CAMERA_ROS2__RTSP_CAPTURER_HPP_

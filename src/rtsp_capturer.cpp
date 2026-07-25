@@ -110,6 +110,8 @@ void RTSPCapturer::run()
       } else {
         RCLCPP_DEBUG(
           logger_, "Grab failed (%d/%d)", consecutive_failures, MAX_GRAB_FAILURES);
+        // Avoid a tight busy-wait loop while the stream is in a transient failure state.
+        std::this_thread::sleep_for(std::chrono::milliseconds(GRAB_FAILURE_SLEEP_MS));
       }
       continue;
     }
@@ -119,6 +121,7 @@ void RTSPCapturer::run()
     cv::Mat frame;
     if (!cap_.retrieve(frame) || frame.empty()) {
       RCLCPP_WARN(logger_, "Retrieved empty frame, skipping");
+      std::this_thread::sleep_for(std::chrono::milliseconds(GRAB_FAILURE_SLEEP_MS));
       continue;
     }
 

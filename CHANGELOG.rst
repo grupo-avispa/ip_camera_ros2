@@ -1,0 +1,42 @@
+=========
+CHANGELOG
+=========
+
+All notable changes to the ip_camera_ros2 project will be documented in this file.
+
+[Unreleased]
+============
+
+Fixed
+-----
+- Fixed a crash in ``IpCameraRos2::capture_ipcam_image()`` when the configured crop ROI
+  (``offset_x``, ``offset_y``, ``image_width``, ``image_height``) fell outside the actual
+  frame bounds; the ROI is now clamped with ``cv::Rect`` intersection and the frame is
+  skipped with a throttled warning instead of letting OpenCV throw.
+- Fixed an integer division by zero in ``IpCameraRos2``'s constructor when ``frame_rate``
+  was set to ``0``; the parameter is now validated and clamped to a minimum of ``1``.
+- Fixed a potential out-of-bounds write in ``IpCameraRos2::create_cam_info_msg()`` by
+  using ``std::copy_n`` bounded by the destination ``std::array`` size, and by only
+  building/publishing ``CameraInfo`` when the ``correct_cam_info_`` calibration-validity
+  flag (previously computed but never read) is ``true``.
+- Fixed ``package.xml`` missing the ``image_transport`` and OpenCV (``libopencv-dev``)
+  dependencies, which are required by ``CMakeLists.txt``/the C++ sources but were absent,
+  breaking ``rosdep install`` on a clean checkout.
+
+Changed
+-------
+- Removed the unused ``geometry_msgs`` dependency and moved ``tf2``/``tf2_ros`` to
+  ``exec_depend`` in ``package.xml`` since they are only used at runtime by the launch
+  files, never compiled against. Added ``exec_depend`` entries for
+  ``robot_state_publisher``, ``xacro`` and ``launch_ros``.
+- Removed the no-op ``target_link_libraries(${PROJECT_NAME})`` call from
+  ``CMakeLists.txt`` and replaced the trivial ``IpCameraRos2`` destructor definition
+  with ``= default``.
+- Synchronized ``README.md`` with the actual parameter defaults and documented the
+  ``buffer_size`` parameter, which was previously missing from the docs. Corrected the
+  Ubuntu version tested with ROS 2 Jazzy (24.04, not 22.04).
+
+Performance
+-----------
+- Added a short interruptible sleep in ``RTSPCapturer::run()`` on transient
+  ``grab()``/empty-frame failures to avoid a busy-wait loop pegging a CPU core.

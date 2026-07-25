@@ -10,7 +10,7 @@ This ROS2 package provides a generic interface for publishing RGB image from any
 ![RGB](doc/image_and_tf.png)
 
 
-The ip_camera_ros2 package has been tested under [ROS2] jazzy on [Ubuntu] 22.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
+The ip_camera_ros2 package has been tested under [ROS2] jazzy on [Ubuntu] 24.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
 ## Installation
 ### Building from Source
@@ -81,11 +81,11 @@ Static transform publisher from tf2_ros package.
 
 ### Parameters
 
-* **`image_topic`** (string, default: "image")
+* **`image_topic`** (string, default: "/image")
 
 	Topic where the image will be published.
 
-* **`cam_info_topic`** (string, default: "camera_info")
+* **`cam_info_topic`** (string, default: "/camera_info")
 
 	Topic where the camera info will be published.
 
@@ -118,9 +118,13 @@ Static transform publisher from tf2_ros package.
 
 	Camera selected frame where the image will be published.
 
-* **`frame_rate`** (unsigned int, default: 30)
+* **`frame_rate`** (int, default: 30)
 
-	Image publishing frame rate in HZ.
+	Image publishing frame rate in Hz. Values lower than 1 are clamped to 1.
+
+* **`buffer_size`** (int, default: 30)
+
+	Maximum number of frames the producer thread accumulates before the consumer drains them. Only the most recent frame is ever published, so this mainly bounds the worst-case memory usage of the buffer.
 
 * **`enable_cam_info`** (bool, default: false)
 

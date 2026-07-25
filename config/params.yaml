@@ -1,6 +1,6 @@
 ip_camera_ros2:
   ros__parameters:
-    # SDK configuration
+    # Topics and camera stream configuration
     image_topic: /image
     cam_info_topic: /camera_info
     image_height: -1

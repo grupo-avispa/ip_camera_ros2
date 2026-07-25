@@ -18,6 +18,7 @@
 
 // C++
 #include <deque>
+#include <ios>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -112,6 +113,51 @@ private:
     if (!node->has_parameter(param_name)) {
       node->declare_parameter(param_name, param_type, parameter_descriptor);
     }
+  }
+
+  /**
+   * @brief Declare (if needed), read and log a scalar parameter in a single call.
+   *
+   * @param param_name Name of the parameter.
+   * @param default_value Default value used if the parameter was not already declared.
+   * @param description Human-readable description of the parameter.
+   * @param out Output variable to store the read value in.
+   */
+  template<typename T>
+  void declare_and_get(
+    const std::string & param_name,
+    const T & default_value,
+    const std::string & description,
+    T & out)
+  {
+    declare_parameter_if_not_declared(
+      this, param_name, rclcpp::ParameterValue(default_value),
+      rcl_interfaces::msg::ParameterDescriptor().set__description(description));
+    this->get_parameter(param_name, out);
+    RCLCPP_INFO_STREAM(
+      this->get_logger(),
+      "The parameter " << param_name << " is set to: [" << std::boolalpha << out << "]");
+  }
+
+  /**
+   * @brief Declare (if needed) and read a double-array parameter with no default value.
+   *
+   * Used for camera calibration parameters, which have no sensible default and must be
+   * supplied by the user when camera info publishing is enabled.
+   *
+   * @param param_name Name of the parameter.
+   * @param description Human-readable description of the parameter.
+   * @param out Output vector to store the read values in.
+   */
+  void declare_and_get_array(
+    const std::string & param_name,
+    const std::string & description,
+    std::vector<double> & out)
+  {
+    declare_parameter_if_not_declared(
+      this, param_name, rclcpp::PARAMETER_DOUBLE_ARRAY,
+      rcl_interfaces::msg::ParameterDescriptor().set__description(description));
+    this->get_parameter(param_name, out);
   }
 
   std::string image_topic_;

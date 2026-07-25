@@ -124,62 +124,34 @@ sensor_msgs::msg::CameraInfo IpCameraRos2::create_cam_info_msg(rclcpp::Time stam
 
 void IpCameraRos2::update_params()
 {
-  declare_parameter_if_not_declared(
-    this, "image_topic", rclcpp::ParameterValue("/image"),
-    rcl_interfaces::msg::ParameterDescriptor().set__description(
-      "Topic of the ip camera image"));
-  this->get_parameter("image_topic", image_topic_);
-  RCLCPP_INFO(this->get_logger(), "The parameter image_topic_ is set to: [%s]",
-    image_topic_.c_str());
+  declare_and_get(
+    "image_topic", std::string("/image"), "Topic of the ip camera image", image_topic_);
+  declare_and_get(
+    "cam_info_topic", std::string("/camera_info"), "Topic of the ip camera info",
+    cam_info_topic_);
 
-  declare_parameter_if_not_declared(
-    this, "cam_info_topic", rclcpp::ParameterValue("/camera_info"),
-    rcl_interfaces::msg::ParameterDescriptor().set__description(
-      "Topic of the ip camera info"));
-  this->get_parameter("cam_info_topic", cam_info_topic_);
-  RCLCPP_INFO(
-    this->get_logger(), "The parameter cam_info_topic is set to: [%s]", cam_info_topic_.c_str());
+  declare_and_get(
+    "image_height", -1, "Target image height after resize or crop (-1 = disabled)",
+    image_height_);
+  declare_and_get(
+    "image_width", -1, "Target image width after resize or crop (-1 = disabled)", image_width_);
+  declare_and_get(
+    "offset_x", -1, "Crop image top-left corner offset X (-1 = disabled)", offset_x_);
+  declare_and_get(
+    "offset_y", -1, "Crop image top-left corner offset Y (-1 = disabled)", offset_y_);
 
-  declare_parameter_if_not_declared(
-    this, "image_height", rclcpp::ParameterValue(-1),
-    rcl_interfaces::msg::ParameterDescriptor().set__description("Depth image height"));
-  this->get_parameter("image_height", image_height_);
-  RCLCPP_INFO(this->get_logger(), "The parameter image_height is set to: [%d]", image_height_);
-
-  declare_parameter_if_not_declared(
-    this, "image_width", rclcpp::ParameterValue(-1),
-    rcl_interfaces::msg::ParameterDescriptor().set__description("Depth image width"));
-  this->get_parameter("image_width", image_width_);
-  RCLCPP_INFO(this->get_logger(), "The parameter image_width is set to: [%d]", image_width_);
-
-  declare_parameter_if_not_declared(
-    this, "offset_x", rclcpp::ParameterValue(-1),
-    rcl_interfaces::msg::ParameterDescriptor().set__description("Crop image offset X"));
-  this->get_parameter("offset_x", offset_x_);
-  RCLCPP_INFO(this->get_logger(), "The parameter offset_x is set to: [%d]", offset_x_);
-
-  declare_parameter_if_not_declared(
-    this, "offset_y", rclcpp::ParameterValue(-1),
-    rcl_interfaces::msg::ParameterDescriptor().set__description("Crop image offset Y"));
-  this->get_parameter("offset_y", offset_y_);
-  RCLCPP_INFO(this->get_logger(), "The parameter offset_y is set to: [%d]", offset_y_);
-
+  // The URL may embed credentials (e.g. rtsp://user:pass@host): never log its value.
   declare_parameter_if_not_declared(
     this, "url", rclcpp::ParameterValue("ipcam_url"),
     rcl_interfaces::msg::ParameterDescriptor().set__description("IP Cam url"));
   this->get_parameter("url", url_);
 
-  declare_parameter_if_not_declared(
-    this, "tf", rclcpp::ParameterValue("camera_optical_link"),
-    rcl_interfaces::msg::ParameterDescriptor().set__description("Camera frame id"));
-  this->get_parameter("tf", frame_);
-  RCLCPP_INFO(this->get_logger(), "The parameter frame is set to: [%s]", frame_.c_str());
+  declare_and_get(
+    "tf", std::string("camera_optical_link"), "Camera frame id", frame_);
 
-  declare_parameter_if_not_declared(
-    this, "frame_rate", rclcpp::ParameterValue(30),
-    rcl_interfaces::msg::ParameterDescriptor().set__description(
-      "Frame rate for publishing images"));
-  this->get_parameter("frame_rate", frame_rate_);
+  declare_and_get(
+    "frame_rate", 30,
+    "Frame rate for publishing images, in Hz (values below 1 are clamped to 1)", frame_rate_);
   if (frame_rate_ < 1) {
     RCLCPP_WARN(
       this->get_logger(),
@@ -187,8 +159,9 @@ void IpCameraRos2::update_params()
       frame_rate_);
     frame_rate_ = 1;
   }
-  RCLCPP_INFO(this->get_logger(), "The parameter frame_rate is set to: [%d]", frame_rate_);
 
+  // buffer_size_ is size_t: kept out of declare_and_get<T>, whose default value and output
+  // must share the same type.
   declare_parameter_if_not_declared(
     this, "buffer_size", rclcpp::ParameterValue(2),
     rcl_interfaces::msg::ParameterDescriptor().set__description(
@@ -196,50 +169,28 @@ void IpCameraRos2::update_params()
       "drains them. The consumer always keeps only the latest frame and discards any "
       "backlog, so this only bounds worst-case memory usage, not smoothing/latency."));
   this->get_parameter("buffer_size", buffer_size_);
-  RCLCPP_INFO(
-    this->get_logger(), "The parameter buffer_size is set to: [%zu]", buffer_size_);
+  if (buffer_size_ < 1) {
+    RCLCPP_WARN(this->get_logger(), "The parameter buffer_size must be at least 1; using 1");
+    buffer_size_ = 1;
+  }
+  RCLCPP_INFO(this->get_logger(), "The parameter buffer_size is set to: [%zu]", buffer_size_);
 
-  declare_parameter_if_not_declared(
-    this, "enable_cam_info", rclcpp::ParameterValue(false),
-    rcl_interfaces::msg::ParameterDescriptor().set__description(
-      "Enable camera info publishing"));
-  this->get_parameter("enable_cam_info", enable_cam_info_);
+  declare_and_get("enable_cam_info", false, "Enable camera info publishing", enable_cam_info_);
 
   if (enable_cam_info_) {
-    RCLCPP_INFO(this->get_logger(), "The parameter enable_cam_info is set to: [true]");
+    declare_and_get(
+      "distortion_model", std::string(),
+      "Camera distortion model, e.g. 'plumb_bob' or 'equidistant'", distortion_model_);
 
-    declare_parameter_if_not_declared(
-      this, "distortion_model", rclcpp::ParameterValue("distortion_model"),
-      rcl_interfaces::msg::ParameterDescriptor().set__description(
-        "Camera calibration parameter"));
-    this->get_parameter("distortion_model", distortion_model_);
-    RCLCPP_INFO(
-      this->get_logger(), "The parameter distortion_model is set to: [%s]",
-      distortion_model_.c_str());
-
-    declare_parameter_if_not_declared(
-      this, "camera_matrix", rclcpp::PARAMETER_DOUBLE_ARRAY,
-      rcl_interfaces::msg::ParameterDescriptor().set__description(
-        "Camera calibration parameter"));
-    this->get_parameter("camera_matrix", k_);
-
-    declare_parameter_if_not_declared(
-      this, "distortion_coefficients", rclcpp::PARAMETER_DOUBLE_ARRAY,
-      rcl_interfaces::msg::ParameterDescriptor().set__description(
-        "Camera calibration parameter"));
-    this->get_parameter("distortion_coefficients", d_);
-
-    declare_parameter_if_not_declared(
-      this, "rectification_matrix", rclcpp::PARAMETER_DOUBLE_ARRAY,
-      rcl_interfaces::msg::ParameterDescriptor().set__description(
-        "Camera calibration parameter"));
-    this->get_parameter("rectification_matrix", r_);
-
-    declare_parameter_if_not_declared(
-      this, "projection_matrix", rclcpp::PARAMETER_DOUBLE_ARRAY,
-      rcl_interfaces::msg::ParameterDescriptor().set__description(
-        "Camera calibration parameter"));
-    this->get_parameter("projection_matrix", p_);
+    declare_and_get_array(
+      "camera_matrix", "3x3 camera intrinsic matrix K (row-major, 9 elements)", k_);
+    declare_and_get_array(
+      "distortion_coefficients", "Distortion coefficients D (size depends on distortion_model)",
+      d_);
+    declare_and_get_array(
+      "rectification_matrix", "3x3 rectification matrix R (row-major, 9 elements)", r_);
+    declare_and_get_array(
+      "projection_matrix", "3x4 projection matrix P (row-major, 12 elements)", p_);
 
     if (k_.size() != 9 || r_.size() != 9 || p_.size() != 12) {
       RCLCPP_WARN(this->get_logger(), "Calibration matrix sizes are incorrect");
@@ -247,7 +198,5 @@ void IpCameraRos2::update_params()
       RCLCPP_INFO(this->get_logger(), "Calibration camera values loaded correctly");
       correct_cam_info_ = true;
     }
-  } else {
-    RCLCPP_INFO(this->get_logger(), "The parameter enable_cam_info is set to: [false]");
   }
 }

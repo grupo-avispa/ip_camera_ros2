@@ -49,8 +49,6 @@ IpCameraRos2::IpCameraRos2()
   }
 }
 
-IpCameraRos2::~IpCameraRos2() {}
-
 void IpCameraRos2::capture_ipcam_image()
 {
   cv::Mat local_frame;

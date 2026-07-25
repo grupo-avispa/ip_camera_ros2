@@ -39,9 +39,6 @@ ament_target_dependencies(${PROJECT_NAME}
     image_transport
 )
 
-# Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME})
-
 # ############
 # # Install ##
 # ############

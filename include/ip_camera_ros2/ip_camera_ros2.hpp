@@ -52,7 +52,7 @@ public:
   /**
    * @brief Destructor.
    */
-  ~IpCameraRos2();
+  ~IpCameraRos2() = default;
 
   // ---- Public fields accessed by main() to construct RTSPCapturer ----
 

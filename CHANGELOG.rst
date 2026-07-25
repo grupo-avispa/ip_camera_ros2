@@ -59,3 +59,11 @@ Performance
 - Publish images via the ``sensor_msgs::msg::Image::SharedPtr`` overload of
   ``image_transport::Publisher::publish()`` instead of dereferencing and passing by
   value, avoiding an extra copy per frame and enabling zero-copy intra-process delivery.
+
+Added
+-----
+- Added a ``test/`` gtest suite (``ament_add_gtest``): ``test_image_ops`` covers ROI
+  clamping and the crop/resize transform (including the [C1] out-of-bounds case),
+  ``test_camera_info_builder`` covers calibration validation and ``CameraInfo``
+  construction (including the [C3] oversized-vector case), and
+  ``test_rtsp_capturer_backoff`` covers the exponential backoff sequence and its cap.

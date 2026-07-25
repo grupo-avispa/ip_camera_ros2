@@ -41,6 +41,10 @@ Changed
 - Lowered the default ``buffer_size`` from 30 (code)/50 (``config/params.yaml``) to 2:
   the consumer always keeps only the latest frame and discards the rest, so a deep
   buffer never smoothed anything and only inflated worst-case memory usage.
+- Refactored ``IpCameraRos2::update_params()`` to use new ``declare_and_get<T>()``/
+  ``declare_and_get_array()`` helpers, removing repeated declare/get/log boilerplate and
+  fixing copy-pasted parameter descriptions (e.g. ``image_height``/``image_width`` no
+  longer describe a "Depth image").
 
 Performance
 -----------

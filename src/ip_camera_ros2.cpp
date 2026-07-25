@@ -16,6 +16,7 @@
 #include "ip_camera_ros2/ip_camera_ros2.hpp"
 
 // C++
+#include <algorithm>
 #include <chrono>
 
 // ROS 2
@@ -42,7 +43,7 @@ IpCameraRos2::IpCameraRos2()
     std::bind(&IpCameraRos2::capture_ipcam_image, this),
     cb_group_);
 
-  if (enable_cam_info_) {
+  if (enable_cam_info_ && correct_cam_info_) {
     cam_info_msg_ = create_cam_info_msg(this->get_clock()->now());
     cam_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>(cam_info_topic_, 10);
   }
@@ -88,7 +89,7 @@ void IpCameraRos2::capture_ipcam_image()
   image_msg_.header.stamp = stamp;
   image_msg_.image = local_frame;
 
-  if (enable_cam_info_) {
+  if (enable_cam_info_ && correct_cam_info_) {
     cam_info_msg_.header.stamp = stamp;
     cam_info_pub_->publish(cam_info_msg_);
   }
@@ -112,9 +113,9 @@ sensor_msgs::msg::CameraInfo IpCameraRos2::create_cam_info_msg(rclcpp::Time stam
   cam_info_msg.height = image_height_;
   cam_info_msg.width = image_width_;
   cam_info_msg.distortion_model = distortion_model_;
-  std::copy(k_.begin(), k_.end(), cam_info_msg.k.begin());
-  std::copy(p_.begin(), p_.end(), cam_info_msg.p.begin());
-  std::copy(r_.begin(), r_.end(), cam_info_msg.r.begin());
+  std::copy_n(k_.begin(), std::min(k_.size(), cam_info_msg.k.size()), cam_info_msg.k.begin());
+  std::copy_n(p_.begin(), std::min(p_.size(), cam_info_msg.p.size()), cam_info_msg.p.begin());
+  std::copy_n(r_.begin(), std::min(r_.size(), cam_info_msg.r.size()), cam_info_msg.r.begin());
   cam_info_msg.d = d_;
   return cam_info_msg;
 }

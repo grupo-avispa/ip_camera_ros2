@@ -79,3 +79,13 @@ Architecture
   reduced to ``rclcpp::init`` + construct node + ``spin`` + ``rclcpp::shutdown``.
 - ``RTSPCapturer`` takes a ``FrameBuffer &`` instead of a raw ``deque``/``mutex``/
   ``buffer_size`` triple.
+- ``RTSPCapturer::stop()`` no longer calls ``cv::VideoCapture::release()`` from outside
+  the producer thread; it only flips the ``running_`` atomic flag, and the producer
+  thread releases the stream itself once it observes it. A ``grab()`` blocked on the
+  network now unblocks via the existing 5 s connection timeout instead of a
+  cross-thread ``release()``, which was technically a data race on ``cv::VideoCapture``.
+- Migrated image/CameraInfo publishing to ``image_transport::CameraPublisher`` (used
+  whenever ``enable_cam_info`` is on and calibration is valid), which publishes both
+  atomically under the standard ``<image_topic>/camera_info`` sibling naming that
+  calibration/rectification tools expect. The separately-configurable
+  ``cam_info_topic`` parameter is removed as a result.

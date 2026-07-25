@@ -70,7 +70,7 @@ Static transform publisher from tf2_ros package.
 
 * **`camera_info`** ([sensor_msgs/CameraInfo])
 
-	Defined meta information for a camera.
+	Defined meta information for a camera. Published only when `enable_cam_info` is true, on the standard sibling topic derived from `image_topic` via `image_transport::CameraPublisher` (e.g. `/image` -> `/camera_info`).
 
 * **`joint_states`**
 * **`robot_description`**
@@ -83,11 +83,7 @@ Static transform publisher from tf2_ros package.
 
 * **`image_topic`** (string, default: "/image")
 
-	Topic where the image will be published.
-
-* **`cam_info_topic`** (string, default: "/camera_info")
-
-	Topic where the camera info will be published.
+	Topic where the image will be published. When `enable_cam_info` is true, camera info is published on the sibling topic derived from this one (e.g. `/image` -> `/camera_info`); it is not independently configurable.
 
 * **`image_height`** (int, default: -1)
 

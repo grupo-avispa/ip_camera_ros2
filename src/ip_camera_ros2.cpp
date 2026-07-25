@@ -33,7 +33,16 @@ IpCameraRos2::IpCameraRos2()
 
   cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-  image_pub_ = image_transport::create_publisher(this, image_topic_);
+  // CameraPublisher bundles image + CameraInfo atomically under the standard
+  // "<image_topic>/camera_info" sibling naming; plain Publisher is used when no valid
+  // calibration is available, since CameraPublisher always requires both messages.
+  if (enable_cam_info_ && correct_cam_info_) {
+    cam_info_msg_ = ip_camera_ros2::build_camera_info(
+      calibration_, frame_, this->get_clock()->now());
+    cam_pub_ = image_transport::create_camera_publisher(this, image_topic_);
+  } else {
+    image_pub_ = image_transport::create_publisher(this, image_topic_);
+  }
 
   const unsigned int frame_period_ms = static_cast<unsigned int>(1000 / frame_rate_);
   RCLCPP_INFO(this->get_logger(), "Frame period set to: %u ms", frame_period_ms);
@@ -42,12 +51,6 @@ IpCameraRos2::IpCameraRos2()
     std::chrono::milliseconds(frame_period_ms),
     std::bind(&IpCameraRos2::capture_ipcam_image, this),
     cb_group_);
-
-  if (enable_cam_info_ && correct_cam_info_) {
-    cam_info_msg_ = ip_camera_ros2::build_camera_info(
-      calibration_, frame_, this->get_clock()->now());
-    cam_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>(cam_info_topic_, 10);
-  }
 
   // Own the frame buffer and the capturer, and run the latter in a dedicated producer
   // thread: this node is the single owner of both, instead of exposing them as public
@@ -96,18 +99,19 @@ void IpCameraRos2::capture_ipcam_image()
   image_msg_.header.stamp = stamp;
   image_msg_.image = local_frame;
 
+  // Publish by shared_ptr instead of by value: avoids an extra Image copy and allows
+  // zero-copy delivery to intra-process subscribers.
   if (enable_cam_info_ && correct_cam_info_) {
     cam_info_msg_.header.stamp = stamp;
     // Always reflect the dimensions of the frame actually being published: they may
     // differ from image_width_/image_height_ (unset, or clamped by the crop ROI check).
     cam_info_msg_.height = static_cast<uint32_t>(local_frame.rows);
     cam_info_msg_.width = static_cast<uint32_t>(local_frame.cols);
-    cam_info_pub_->publish(cam_info_msg_);
+    cam_pub_.publish(
+      image_msg_.toImageMsg(), std::make_shared<sensor_msgs::msg::CameraInfo>(cam_info_msg_));
+  } else {
+    image_pub_.publish(image_msg_.toImageMsg());
   }
-
-  // Publish by shared_ptr instead of by value: avoids an extra Image copy and allows
-  // zero-copy delivery to intra-process subscribers.
-  image_pub_.publish(image_msg_.toImageMsg());
 }
 
 cv_bridge::CvImage IpCameraRos2::initialize_image_msg()
@@ -121,10 +125,10 @@ cv_bridge::CvImage IpCameraRos2::initialize_image_msg()
 void IpCameraRos2::update_params()
 {
   declare_and_get(
-    "image_topic", std::string("/image"), "Topic of the ip camera image", image_topic_);
-  declare_and_get(
-    "cam_info_topic", std::string("/camera_info"), "Topic of the ip camera info",
-    cam_info_topic_);
+    "image_topic", std::string("/image"),
+    "Topic of the ip camera image. When enable_cam_info is true, CameraInfo is "
+    "published on the standard sibling topic (e.g. '/image' -> '/camera_info')",
+    image_topic_);
 
   declare_and_get(
     "image_height", -1, "Target image height after resize or crop (-1 = disabled)",

@@ -164,7 +164,6 @@ private:
   }
 
   std::string image_topic_;
-  std::string cam_info_topic_;
 
   /// Target image dimensions after resize (-1 = no resize)
   int image_height_;
@@ -186,8 +185,12 @@ private:
   cv_bridge::CvImage image_msg_;
   sensor_msgs::msg::CameraInfo cam_info_msg_;
 
+  // Exactly one of these is advertised, chosen by `enable_cam_info_ && correct_cam_info_`
+  // in the constructor: CameraPublisher bundles image + CameraInfo atomically under the
+  // standard `<image_topic>/camera_info` sibling naming that calibration/rectification
+  // tools expect, but requires both messages on every publish.
   image_transport::Publisher image_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr cam_info_pub_;
+  image_transport::CameraPublisher cam_pub_;
 
   /**
    * @brief Timer callback that dequeues the latest frame and publishes it.

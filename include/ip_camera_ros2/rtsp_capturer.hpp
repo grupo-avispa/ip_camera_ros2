@@ -60,7 +60,12 @@ public:
   void run();
 
   /**
-   * @brief Signal the capture loop to stop and release the stream.
+   * @brief Signal the capture loop to stop.
+   *
+   * Only flips an atomic flag; the producer thread releases the stream itself once it
+   * observes the flag, since cv::VideoCapture must not be touched from another thread.
+   * If a grab() call is blocked on the network, it unblocks within the connection
+   * timeout configured in connect() (5 s), bounding shutdown latency.
    */
   void stop();
 

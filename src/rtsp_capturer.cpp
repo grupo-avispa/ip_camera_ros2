@@ -60,11 +60,12 @@ int RTSPCapturer::next_retry_delay(int current_delay_s)
 
 void RTSPCapturer::stop()
 {
+  // Only signal via the atomic flag: cv::VideoCapture is not thread-safe, so cap_ must
+  // only ever be touched from the producer thread running run(), which releases it
+  // itself once it observes running_ == false (below). A grab() blocked on the network
+  // unblocks via the socket timeout already configured in connect() (stimeout), bounding
+  // shutdown latency without a cross-thread release().
   running_ = false;
-  // Releasing the capture object unblocks any pending grab() call.
-  // cv::VideoCapture is not thread-safe in general, but releasing while
-  // grab() is in progress is safe in practice with the FFmpeg backend.
-  cap_.release();
 }
 
 void RTSPCapturer::run()

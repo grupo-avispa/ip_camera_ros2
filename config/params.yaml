@@ -1,8 +1,9 @@
 ip_camera_ros2:
   ros__parameters:
     # Topics and camera stream configuration
+    # When enable_cam_info is true, CameraInfo is published on the standard sibling
+    # topic derived from image_topic (e.g. "/image" -> "/camera_info")
     image_topic: /image
-    cam_info_topic: /camera_info
     image_height: -1
     image_width: -1
     offset_x: -1

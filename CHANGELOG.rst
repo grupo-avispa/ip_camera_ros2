@@ -38,6 +38,9 @@ Changed
 - Synchronized ``README.md`` with the actual parameter defaults and documented the
   ``buffer_size`` parameter, which was previously missing from the docs. Corrected the
   Ubuntu version tested with ROS 2 Jazzy (24.04, not 22.04).
+- Lowered the default ``buffer_size`` from 30 (code)/50 (``config/params.yaml``) to 2:
+  the consumer always keeps only the latest frame and discards the rest, so a deep
+  buffer never smoothed anything and only inflated worst-case memory usage.
 
 Performance
 -----------

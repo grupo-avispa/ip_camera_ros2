@@ -190,9 +190,11 @@ void IpCameraRos2::update_params()
   RCLCPP_INFO(this->get_logger(), "The parameter frame_rate is set to: [%d]", frame_rate_);
 
   declare_parameter_if_not_declared(
-    this, "buffer_size", rclcpp::ParameterValue(30),
+    this, "buffer_size", rclcpp::ParameterValue(2),
     rcl_interfaces::msg::ParameterDescriptor().set__description(
-      "Frame buffer size for the producer-consumer pattern"));
+      "Maximum number of frames the producer thread accumulates before the consumer "
+      "drains them. The consumer always keeps only the latest frame and discards any "
+      "backlog, so this only bounds worst-case memory usage, not smoothing/latency."));
   this->get_parameter("buffer_size", buffer_size_);
   RCLCPP_INFO(
     this->get_logger(), "The parameter buffer_size is set to: [%zu]", buffer_size_);

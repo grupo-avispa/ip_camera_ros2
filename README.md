@@ -122,7 +122,7 @@ Static transform publisher from tf2_ros package.
 
 	Image publishing frame rate in Hz. Values lower than 1 are clamped to 1.
 
-* **`buffer_size`** (int, default: 30)
+* **`buffer_size`** (int, default: 2)
 
 	Maximum number of frames the producer thread accumulates before the consumer drains them. Only the most recent frame is ever published, so this mainly bounds the worst-case memory usage of the buffer.
 

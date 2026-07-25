@@ -68,7 +68,15 @@ void IpCameraRos2::capture_ipcam_image()
   // Crop or resize
   if (image_width_ > 0 && image_height_ > 0) {
     if (offset_x_ >= 0 && offset_y_ >= 0) {
-      const cv::Rect roi(offset_x_, offset_y_, image_width_, image_height_);
+      const cv::Rect frame_rect(0, 0, local_frame.cols, local_frame.rows);
+      const cv::Rect roi = cv::Rect(offset_x_, offset_y_, image_width_, image_height_) & frame_rect;
+      if (roi.width == 0 || roi.height == 0) {
+        RCLCPP_WARN_THROTTLE(
+          this->get_logger(), *this->get_clock(), 5000,
+          "Crop ROI (%d,%d,%d,%d) is outside the frame bounds (%dx%d); skipping this frame",
+          offset_x_, offset_y_, image_width_, image_height_, local_frame.cols, local_frame.rows);
+        return;
+      }
       local_frame = local_frame(roi).clone();
     } else {
       cv::resize(local_frame, local_frame, cv::Size(image_width_, image_height_));

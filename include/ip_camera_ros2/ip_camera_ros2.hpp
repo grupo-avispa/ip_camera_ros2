@@ -230,7 +230,7 @@ private:
 
   /// Only created when enable_cam_info_ && correct_cam_info_
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::CameraInfo>>
-    cam_info_pub_;
+  cam_info_pub_;
 
   /**
    * @brief Timer callback that dequeues the latest frame and publishes it.

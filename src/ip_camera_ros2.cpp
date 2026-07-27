@@ -73,7 +73,7 @@ CallbackReturn IpCameraRos2::on_activate(const rclcpp_lifecycle::State & state)
   // Only connect to the RTSP stream once active, and release it on deactivation.
   capturer_ = std::make_unique<RTSPCapturer>(url_, *frame_buffer_, this->get_logger());
   capturer_thread_ = std::thread([this]() {
-      capturer_->run();
+        capturer_->run();
     });
 
   RCLCPP_INFO(this->get_logger(), "Activating %s node", this->get_name());

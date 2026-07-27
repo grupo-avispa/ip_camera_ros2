@@ -225,18 +225,23 @@ void IpCameraRos2::update_params()
   }
 
   // buffer_size_ is size_t: kept out of declare_and_get<T>, whose default value and output
-  // must share the same type.
+  // must share the same type. It is read into an int because rclcpp stores integer
+  // parameters as int64_t and cannot deduce an unsigned type; going through a signed
+  // value also lets the range check below reject a negative setting, which converting
+  // straight to size_t would have turned into an enormous buffer.
   declare_parameter_if_not_declared(
     this, "buffer_size", rclcpp::ParameterValue(2),
     rcl_interfaces::msg::ParameterDescriptor().set__description(
       "Maximum number of frames the producer thread accumulates before the consumer "
       "drains them. The consumer always keeps only the latest frame and discards any "
       "backlog, so this only bounds worst-case memory usage, not smoothing/latency."));
-  this->get_parameter("buffer_size", buffer_size_);
-  if (buffer_size_ < 1) {
+  int buffer_size = 2;
+  this->get_parameter("buffer_size", buffer_size);
+  if (buffer_size < 1) {
     RCLCPP_WARN(this->get_logger(), "The parameter buffer_size must be at least 1; using 1");
-    buffer_size_ = 1;
+    buffer_size = 1;
   }
+  buffer_size_ = static_cast<size_t>(buffer_size);
   RCLCPP_INFO(this->get_logger(), "The parameter buffer_size is set to: [%zu]", buffer_size_);
 
   declare_and_get("enable_cam_info", false, "Enable camera info publishing", enable_cam_info_);

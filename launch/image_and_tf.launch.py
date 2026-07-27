@@ -21,14 +21,9 @@ import os
 
 from ament_index_python import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, EmitEvent, RegisterEventHandler
-import launch.events
-from launch.conditions import IfCondition
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import LifecycleNode, Node
-from launch_ros.event_handlers import OnStateTransition
-from launch_ros.events.lifecycle import ChangeState
-import lifecycle_msgs.msg
 import xacro
 
 
@@ -40,6 +35,8 @@ def generate_launch_description():
 
     # Input parameters declaration
     params_file = LaunchConfiguration('params_file')
+    log_level = LaunchConfiguration('log_level')
+    autostart = LaunchConfiguration('autostart')
 
     declare_params_file_arg = DeclareLaunchArgument(
         'params_file',
@@ -48,7 +45,7 @@ def generate_launch_description():
     )
 
     declare_log_level_arg = DeclareLaunchArgument(
-        name='log-level',
+        name='log_level',
         default_value='info',
         description='Logging level (info, debug, ...)'
     )
@@ -99,36 +96,12 @@ def generate_launch_description():
         executable='ip_camera_ros2',
         name='ip_camera_ros2',
         parameters=[params_file],
+        autostart=autostart,
         emulate_tty=True,
         output='screen',
         arguments=[
             '--ros-args',
-            '--log-level', ['ip_camera_ros2:=', LaunchConfiguration('log-level')]]
-    )
-
-    # Autostart: once the node reaches the "inactive" state (after configuring),
-    # request the "activate" transition automatically.
-    activate_on_configured = RegisterEventHandler(
-        OnStateTransition(
-            target_lifecycle_node=ipcam_ros2_node,
-            goal_state='inactive',
-            entities=[
-                EmitEvent(event=ChangeState(
-                    lifecycle_node_matcher=launch.events.matches_action(ipcam_ros2_node),
-                    transition_id=lifecycle_msgs.msg.Transition.TRANSITION_ACTIVATE,
-                )),
-            ],
-        ),
-        condition=IfCondition(LaunchConfiguration('autostart'))
-    )
-
-    # Autostart: request the "configure" transition as soon as the node is launched.
-    configure_on_startup = EmitEvent(
-        event=ChangeState(
-            lifecycle_node_matcher=launch.events.matches_action(ipcam_ros2_node),
-            transition_id=lifecycle_msgs.msg.Transition.TRANSITION_CONFIGURE,
-        ),
-        condition=IfCondition(LaunchConfiguration('autostart'))
+            '--log-level', ['ip_camera_ros2:=', log_level]]
     )
 
     return LaunchDescription([
@@ -138,7 +111,5 @@ def generate_launch_description():
         use_sim_time_launch_arg,
         camera_state_publisher_node,
         ipcam_tf_node,
-        ipcam_ros2_node,
-        activate_on_configured,
-        configure_on_startup
+        ipcam_ros2_node
     ])

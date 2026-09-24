@@ -31,6 +31,7 @@
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
+#include "sensor_msgs/msg/compressed_image.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
 // Package
@@ -228,9 +229,13 @@ private:
 
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Image>> image_pub_;
 
+  /// JPEG-compressed variant of image_pub_, published on "<image_topic>/compressed"
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::CompressedImage>>
+  image_compressed_pub_;
+
   /// Only created when enable_cam_info_ && correct_cam_info_
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::CameraInfo>>
-    cam_info_pub_;
+  cam_info_pub_;
 
   /**
    * @brief Timer callback that dequeues the latest frame and publishes it.

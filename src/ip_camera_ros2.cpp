@@ -45,6 +45,11 @@ CallbackReturn IpCameraRos2::on_configure(const rclcpp_lifecycle::State &)
 
   image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(image_topic_, 10);
 
+  // JPEG-compressed counterpart of image_pub_, published lazily (only while subscribed)
+  // to avoid the encoding cost when nobody is listening.
+  image_compressed_pub_ = this->create_publisher<sensor_msgs::msg::CompressedImage>(
+    image_topic_ + "/compressed", 10);
+
   if (enable_cam_info_ && correct_cam_info_) {
     cam_info_msg_ = ip_camera_ros2::build_camera_info(
       calibration_, frame_, this->get_clock()->now());
@@ -73,7 +78,7 @@ CallbackReturn IpCameraRos2::on_activate(const rclcpp_lifecycle::State & state)
   // Only connect to the RTSP stream once active, and release it on deactivation.
   capturer_ = std::make_unique<RTSPCapturer>(url_, *frame_buffer_, this->get_logger());
   capturer_thread_ = std::thread([this]() {
-      capturer_->run();
+        capturer_->run();
     });
 
   RCLCPP_INFO(this->get_logger(), "Activating %s node", this->get_name());
@@ -100,6 +105,7 @@ CallbackReturn IpCameraRos2::on_cleanup(const rclcpp_lifecycle::State &)
 {
   frame_buffer_.reset();
   image_pub_.reset();
+  image_compressed_pub_.reset();
   cam_info_pub_.reset();
   cb_group_.reset();
 
@@ -117,6 +123,7 @@ CallbackReturn IpCameraRos2::on_shutdown(const rclcpp_lifecycle::State & state)
   }
   frame_buffer_.reset();
   image_pub_.reset();
+  image_compressed_pub_.reset();
   cam_info_pub_.reset();
 
   RCLCPP_INFO(
@@ -167,6 +174,14 @@ void IpCameraRos2::capture_ipcam_image()
   auto image_msg = std::make_unique<sensor_msgs::msg::Image>();
   image_msg_.toImageMsg(*image_msg);
   image_pub_->publish(std::move(image_msg));
+
+  // Only encode when someone is actually subscribed: JPEG encoding is comparatively
+  // expensive, so it is skipped unless a viewer (e.g. rqt_image_view) is listening.
+  if (image_compressed_pub_->get_subscription_count() > 0) {
+    auto compressed_msg = std::make_unique<sensor_msgs::msg::CompressedImage>();
+    image_msg_.toCompressedImageMsg(*compressed_msg);
+    image_compressed_pub_->publish(std::move(compressed_msg));
+  }
 
   if (enable_cam_info_ && correct_cam_info_) {
     cam_info_msg_.header.stamp = stamp;

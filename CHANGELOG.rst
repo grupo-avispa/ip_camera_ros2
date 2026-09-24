@@ -62,6 +62,11 @@ Performance
 
 Added
 -----
+- Publish a JPEG-compressed variant of the camera image on ``<image_topic>/compressed``
+  (``sensor_msgs/msg/CompressedImage``), mirroring the ``yolo_ros`` behaviour. The frame
+  is only encoded and published while the topic has subscribers, so the encoding cost is
+  paid only when a viewer (e.g. ``rqt_image_view`` with the ``compressed`` transport) is
+  listening. Added the ``compressed_image_transport`` ``exec_depend`` for viewing it.
 - Added a ``test/`` gtest suite (``ament_add_gtest``): ``test_image_ops`` covers ROI
   clamping and the crop/resize transform (including the [C1] out-of-bounds case),
   ``test_camera_info_builder`` covers calibration validation and ``CameraInfo``

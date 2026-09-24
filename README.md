@@ -19,7 +19,8 @@ The ip_camera_ros2 package has been tested under [ROS2] jazzy on [Ubuntu] 24.04.
 
 - [Robot Operating System (ROS) 2](https://docs.ros.org/en/jazzy/) (middleware for robotics),
 - [OpenCV](https://opencv.org/) (computer vision library),
-- [cv_bridge](http://wiki.ros.org/cv_bridge) (interface OpenCV with ROS)
+- [cv_bridge](http://wiki.ros.org/cv_bridge) (interface OpenCV with ROS),
+- [compressed_image_transport](https://github.com/ros-perception/image_transport_plugins) (JPEG encoding for the `image/compressed` topic; only needed to view it, not to publish)
 
 #### Building
 
@@ -78,6 +79,10 @@ Static transform publisher from tf2_ros package.
 * **`image`** ([sensor_msgs/Image])
 
 	The camera image.
+
+* **`image/compressed`** ([sensor_msgs/CompressedImage])
+
+	JPEG-compressed version of `image`, for viewing over a bandwidth-constrained link (e.g. `rqt_image_view` set to the `compressed` transport). Only published while someone is subscribed to it.
 
 * **`camera_info`** ([sensor_msgs/CameraInfo])
 
@@ -148,4 +153,5 @@ Static transform publisher from tf2_ros package.
 [Ubuntu]: https://ubuntu.com/
 [ROS2]: https://docs.ros.org/en/jazzy/
 [sensor_msgs/Image]: https://docs.ros2.org/jazzy/api/sensor_msgs/msg/Image.html
+[sensor_msgs/CompressedImage]: https://docs.ros2.org/jazzy/api/sensor_msgs/msg/CompressedImage.html
 [sensor_msgs/CameraInfo]: https://docs.ros2.org/jazzy/api/sensor_msgs/msg/CameraInfo.html

@@ -1,8 +1,9 @@
-ip_camera_ros2:
+# The wildcard lets the same file be used with any namespace
+/**:
   ros__parameters:
     # Topics and camera stream configuration
-    # When enable_cam_info is true, CameraInfo is published on the standard sibling
-    # topic derived from image_topic (e.g. "/image" -> "/camera_info")
+    # When camera info is published, it goes to the standard sibling topic derived from
+    # image_topic (e.g. "/image" -> "/camera_info")
     image_topic: /image
     image_height: -1
     image_width: -1
@@ -12,9 +13,17 @@ ip_camera_ros2:
     tf: "camera_optical_link"
     frame_rate: 15
     buffer_size: 2
-    # Camera calibration info
-    enable_cam_info: true # true enables camera info publishing
-    # Paste here your camera calibration parameters following the format:
+    # Seconds subtracted from the time a frame reaches the host to compensate the constant
+    # latency of the camera and the stream
+    stamp_offset: 0.0
+    # Camera calibration info. Leave it disabled until the camera is calibrated: see
+    # doc/fisheye_calibration.md. Calibration tools can apply their result through the
+    # set_camera_info service, and `ros2 param dump` gives the values to paste here.
+    enable_cam_info: false
+    # Size of the image used to calibrate. Camera info is not published if the published
+    # image has another size (-1 = do not check)
+    calibration_width: -1
+    calibration_height: -1
     camera_matrix: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     distortion_model: equidistant
     distortion_coefficients: [0.0, 0.0, 0.0, 0.0]

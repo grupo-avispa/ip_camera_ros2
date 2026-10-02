@@ -19,6 +19,7 @@
 // C++
 #include <ios>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
@@ -34,6 +35,7 @@
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/compressed_image.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "sensor_msgs/srv/set_camera_info.hpp"
 
 // Package
 #include "ip_camera_ros2/camera_info_builder.hpp"
@@ -97,7 +99,7 @@ public:
    */
   CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state) override;
 
-private:
+protected:
   /// RTSP stream URL
   std::string url_;
 
@@ -119,6 +121,13 @@ private:
   /// Producer that fills frame_buffer_ from a dedicated thread; only alive while active
   std::unique_ptr<RTSPCapturer> capturer_;
   std::thread capturer_thread_;
+
+  /**
+   * @brief Create the capturer and start its producer thread.
+   *
+   * Virtual so that tests can feed frame_buffer_ without opening a stream.
+   */
+  virtual void start_capture();
 
   /**
    * @brief Stop and join the capture thread, if any is running.
@@ -224,9 +233,19 @@ private:
 
   std::string frame_;
 
+  /// Guards the calibration state below, shared by the timer and the parameter callbacks
+  std::mutex cam_info_mutex_;
+
+  /// Whether CameraInfo may be published at all
   bool enable_cam_info_{false};
   ip_camera_ros2::CalibrationParams calibration_;
+
+  /// Whether calibration_ passed check_calibration()
   bool correct_cam_info_{false};
+
+  /// Size of the image the camera was calibrated with (-1 = do not check)
+  int calibration_width_{-1};
+  int calibration_height_{-1};
 
   rclcpp::CallbackGroup::SharedPtr cb_group_;
   rclcpp::TimerBase::SharedPtr timer_;
@@ -240,9 +259,53 @@ private:
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::CompressedImage>>
   image_compressed_pub_;
 
-  /// Only created when enable_cam_info_ && correct_cam_info_
+  /// Always created, so camera info can be enabled at runtime
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::CameraInfo>>
   cam_info_pub_;
+
+  /**
+   * @brief Read the calibration parameters and rebuild the CameraInfo template from them.
+   *
+   * Logs why the calibration cannot be published when camera info is enabled but invalid.
+   */
+  void refresh_calibration();
+
+  /**
+   * @brief Parameter callback that refreshes the calibration after any of its parameters change.
+   *
+   * @param parameters Parameters that were just set.
+   */
+  void on_parameters_set(const std::vector<rclcpp::Parameter> & parameters);
+
+  /**
+   * @brief Handle a calibration sent by a calibration tool.
+   *
+   * The calibration is validated and applied as node parameters, so that dumping the node's
+   * parameters yields the values to persist.
+   *
+   * @param request Calibration to apply.
+   * @param response Whether it was applied and why not otherwise.
+   */
+  void handle_set_camera_info(
+    const std::shared_ptr<sensor_msgs::srv::SetCameraInfo::Request> request,
+    std::shared_ptr<sensor_msgs::srv::SetCameraInfo::Response> response);
+
+  /**
+   * @brief Build the CameraInfo to publish with a frame, if the calibration allows it.
+   *
+   * @param stamp Stamp of the frame.
+   * @param rows Height of the published frame.
+   * @param cols Width of the published frame.
+   * @return The message, or std::nullopt if camera info is disabled, invalid or stale.
+   */
+  std::optional<sensor_msgs::msg::CameraInfo> make_camera_info(
+    const rclcpp::Time & stamp, int rows, int cols);
+
+  /// Handle of the callback that reacts to calibration parameter changes
+  rclcpp::node_interfaces::PostSetParametersCallbackHandle::SharedPtr post_set_handle_;
+
+  /// Service that lets a calibration tool apply its result
+  rclcpp::Service<sensor_msgs::srv::SetCameraInfo>::SharedPtr set_camera_info_srv_;
 
   /**
    * @brief Timer callback that dequeues the latest frame and publishes it.

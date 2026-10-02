@@ -26,3 +26,12 @@ target_link_libraries(test_rtsp_capturer_backoff
   rclcpp::rclcpp
   ${OpenCV_LIBS}
 )
+
+# Test for the node, fed with injected frames instead of a stream
+ament_add_gtest(test_ip_camera_node test_ip_camera_node.cpp)
+target_link_libraries(test_ip_camera_node
+  ${library_name}
+  rclcpp::rclcpp
+  ${sensor_msgs_TARGETS}
+  ${OpenCV_LIBS}
+)

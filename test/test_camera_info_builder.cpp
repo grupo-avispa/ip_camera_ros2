@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cmath>
+#include <string>
+
 #include "gtest/gtest.h"
 #include "ip_camera_ros2/camera_info_builder.hpp"
 
@@ -58,6 +61,104 @@ TEST(IsCalibrationValid, DistortionCoefficientsSizeIsNotConstrained) {
   auto calibration = make_valid_calibration();
   calibration.d.clear();
   EXPECT_TRUE(ip_camera_ros2::is_calibration_valid(calibration));
+}
+
+namespace
+{
+
+/// @brief Fisheye calibration with values typical of a 4 MP ceiling camera.
+ip_camera_ros2::CalibrationParams make_fisheye_calibration()
+{
+  ip_camera_ros2::CalibrationParams calibration;
+  calibration.distortion_model = "equidistant";
+  calibration.k = {1325.4, 0.0, 1311.2, 0.0, 1324.9, 1021.7, 0.0, 0.0, 1.0};
+  calibration.d = {0.0213, -0.0087, 0.0035, -0.0009};
+  calibration.r = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+  calibration.p = {1325.4, 0.0, 1311.2, 0.0, 0.0, 1324.9, 1021.7, 0.0, 0.0, 0.0, 1.0, 0.0};
+  return calibration;
+}
+
+}  // namespace
+
+TEST(CheckCalibration, AcceptsRealFisheyeCalibration) {
+  const auto check = ip_camera_ros2::check_calibration(make_fisheye_calibration());
+  EXPECT_TRUE(check.valid);
+  EXPECT_TRUE(check.reason.empty());
+  EXPECT_TRUE(check.warning.empty());
+}
+
+TEST(CheckCalibration, AcceptsPlumbBobWithFiveCoefficients) {
+  auto calibration = make_fisheye_calibration();
+  calibration.distortion_model = "plumb_bob";
+  calibration.d = {0.1, 0.2, 0.0, 0.0, 0.0};
+  EXPECT_TRUE(ip_camera_ros2::check_calibration(calibration).valid);
+}
+
+TEST(CheckCalibration, RejectsTheAllZeroTemplate) {
+  auto calibration = make_fisheye_calibration();
+  calibration.k = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+  const auto check = ip_camera_ros2::check_calibration(calibration);
+  EXPECT_FALSE(check.valid);
+  EXPECT_NE(check.reason.find("focal length"), std::string::npos);
+}
+
+TEST(CheckCalibration, RejectsNonPositiveFocalLengths) {
+  auto calibration = make_fisheye_calibration();
+  calibration.k[4] = -1.0;
+  EXPECT_FALSE(ip_camera_ros2::check_calibration(calibration).valid);
+  calibration = make_fisheye_calibration();
+  calibration.k[0] = std::nan("");
+  EXPECT_FALSE(ip_camera_ros2::check_calibration(calibration).valid);
+}
+
+TEST(CheckCalibration, RejectsLastElementOfKDifferentFromOne) {
+  auto calibration = make_fisheye_calibration();
+  calibration.k[8] = 0.0;
+  const auto check = ip_camera_ros2::check_calibration(calibration);
+  EXPECT_FALSE(check.valid);
+  EXPECT_NE(check.reason.find("camera_matrix[8]"), std::string::npos);
+}
+
+TEST(CheckCalibration, RejectsWrongMatrixSizes) {
+  auto calibration = make_fisheye_calibration();
+  calibration.k.pop_back();
+  EXPECT_NE(
+    ip_camera_ros2::check_calibration(calibration).reason.find("camera_matrix"),
+    std::string::npos);
+  calibration = make_fisheye_calibration();
+  calibration.r.pop_back();
+  EXPECT_NE(
+    ip_camera_ros2::check_calibration(calibration).reason.find("rectification_matrix"),
+    std::string::npos);
+  calibration = make_fisheye_calibration();
+  calibration.p.pop_back();
+  EXPECT_NE(
+    ip_camera_ros2::check_calibration(calibration).reason.find("projection_matrix"),
+    std::string::npos);
+}
+
+TEST(CheckCalibration, RejectsWrongDistortionSizeForTheModel) {
+  auto calibration = make_fisheye_calibration();
+  calibration.d.push_back(0.0);
+  auto check = ip_camera_ros2::check_calibration(calibration);
+  EXPECT_FALSE(check.valid);
+  EXPECT_NE(check.reason.find("equidistant"), std::string::npos);
+  EXPECT_NE(check.reason.find("4"), std::string::npos);
+
+  calibration = make_fisheye_calibration();
+  calibration.distortion_model = "plumb_bob";
+  check = ip_camera_ros2::check_calibration(calibration);
+  EXPECT_FALSE(check.valid);
+  EXPECT_NE(check.reason.find("plumb_bob"), std::string::npos);
+}
+
+TEST(CheckCalibration, AcceptsUnknownModelWithAWarning) {
+  auto calibration = make_fisheye_calibration();
+  calibration.distortion_model = "custom";
+  calibration.d.clear();
+  const auto check = ip_camera_ros2::check_calibration(calibration);
+  EXPECT_TRUE(check.valid);
+  EXPECT_NE(check.warning.find("custom"), std::string::npos);
 }
 
 TEST(BuildCameraInfo, PopulatesHeaderAndCalibrationFields) {

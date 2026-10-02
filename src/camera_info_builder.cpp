@@ -16,6 +16,8 @@
 #include "ip_camera_ros2/camera_info_builder.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <optional>
 
 namespace ip_camera_ros2
 {
@@ -23,6 +25,66 @@ namespace ip_camera_ros2
 bool is_calibration_valid(const CalibrationParams & calibration)
 {
   return calibration.k.size() == 9 && calibration.r.size() == 9 && calibration.p.size() == 12;
+}
+
+namespace
+{
+
+/**
+ * @brief Number of distortion coefficients a known distortion model uses.
+ *
+ * @param distortion_model Name of the distortion model.
+ * @return The coefficient count, or std::nullopt for an unrecognized model.
+ */
+std::optional<size_t> expected_distortion_size(const std::string & distortion_model)
+{
+  if (distortion_model == "equidistant") {
+    return 4;
+  }
+  if (distortion_model == "plumb_bob") {
+    return 5;
+  }
+  if (distortion_model == "rational_polynomial") {
+    return 8;
+  }
+  return std::nullopt;
+}
+
+}  // namespace
+
+CalibrationCheck check_calibration(const CalibrationParams & calibration)
+{
+  CalibrationCheck check;
+
+  if (calibration.k.size() != 9) {
+    check.reason = "camera_matrix must have 9 elements, got " +
+      std::to_string(calibration.k.size());
+  } else if (calibration.r.size() != 9) {
+    check.reason = "rectification_matrix must have 9 elements, got " +
+      std::to_string(calibration.r.size());
+  } else if (calibration.p.size() != 12) {
+    check.reason = "projection_matrix must have 12 elements, got " +
+      std::to_string(calibration.p.size());
+  } else if (!(calibration.k[0] > 0.0) || !(calibration.k[4] > 0.0)) {
+    check.reason = "camera_matrix has a non-positive focal length (fx = " +
+      std::to_string(calibration.k[0]) + ", fy = " + std::to_string(calibration.k[4]) +
+      "): the camera is not calibrated";
+  } else if (calibration.k[8] != 1.0) {
+    check.reason = "camera_matrix[8] must be 1, got " + std::to_string(calibration.k[8]);
+  } else {
+    const auto expected = expected_distortion_size(calibration.distortion_model);
+    if (expected && calibration.d.size() != *expected) {
+      check.reason = "distortion model '" + calibration.distortion_model + "' needs " +
+        std::to_string(*expected) + " distortion coefficients, got " +
+        std::to_string(calibration.d.size());
+    } else if (!expected) {
+      check.warning = "unrecognized distortion model '" + calibration.distortion_model +
+        "': its distortion coefficients were not checked";
+    }
+  }
+
+  check.valid = check.reason.empty();
+  return check;
 }
 
 sensor_msgs::msg::CameraInfo build_camera_info(

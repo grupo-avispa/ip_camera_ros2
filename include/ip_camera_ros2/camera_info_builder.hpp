@@ -44,6 +44,21 @@ struct CalibrationParams
 };
 
 /**
+ * @brief Outcome of check_calibration().
+ */
+struct CalibrationCheck
+{
+  /// True if the calibration can be published as a CameraInfo
+  bool valid{false};
+
+  /// Human-readable explanation of why the calibration is not valid; empty when valid
+  std::string reason;
+
+  /// Non-blocking remark, such as an unrecognized distortion model; empty if none
+  std::string warning;
+};
+
+/**
  * @brief Check whether the calibration matrices have the sizes CameraInfo expects.
  *
  * @param calibration Calibration parameters to validate.
@@ -51,6 +66,19 @@ struct CalibrationParams
  *         (9, 9 and 12 elements respectively), false otherwise.
  */
 bool is_calibration_valid(const CalibrationParams & calibration);
+
+/**
+ * @brief Check that a calibration is usable, not just well-shaped.
+ *
+ * Besides the sizes checked by is_calibration_valid(), the focal lengths `K[0]` and `K[4]`
+ * must be positive and `K[8]` must be 1, which rejects the all-zero template, and the number of
+ * distortion coefficients must match the distortion model (4 for `equidistant`, 5 for
+ * `plumb_bob`, 8 for `rational_polynomial`). Other models only produce a warning.
+ *
+ * @param calibration Calibration parameters to validate.
+ * @return The verdict, with the reason when the calibration is not valid.
+ */
+CalibrationCheck check_calibration(const CalibrationParams & calibration);
 
 /**
  * @brief Build a CameraInfo message from calibration parameters.

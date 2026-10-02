@@ -17,14 +17,16 @@
 #include <algorithm>
 #include <cstdlib>
 #include <thread>
+#include <utility>
 
 #include "ip_camera_ros2/rtsp_capturer.hpp"
 
 RTSPCapturer::RTSPCapturer(
   const std::string & url,
   ip_camera_ros2::FrameBuffer & frame_buffer,
-  rclcpp::Logger logger)
-: url_(url), frame_buffer_(frame_buffer), logger_(logger)
+  rclcpp::Logger logger,
+  rclcpp::Clock::SharedPtr clock)
+: url_(url), frame_buffer_(frame_buffer), logger_(logger), clock_(std::move(clock))
 {
 }
 
@@ -121,6 +123,9 @@ void RTSPCapturer::run()
 
     consecutive_failures = 0;
 
+    // Stamp as soon as the grab succeeds: retrieve() decodes the frame and takes a variable time.
+    const rclcpp::Time stamp = clock_->now();
+
     cv::Mat frame;
     if (!cap_.retrieve(frame) || frame.empty()) {
       RCLCPP_WARN(logger_, "Retrieved empty frame, skipping");
@@ -128,7 +133,7 @@ void RTSPCapturer::run()
       continue;
     }
 
-    frame_buffer_.push(std::move(frame));
+    frame_buffer_.push(ip_camera_ros2::StampedFrame{std::move(frame), stamp});
   }
 
   cap_.release();

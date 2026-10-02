@@ -40,11 +40,13 @@ public:
    * @param url          RTSP stream URL.
    * @param frame_buffer Shared frame buffer (owned by IpCameraRos2).
    * @param logger       ROS2 logger for diagnostics.
+   * @param clock        Clock used to stamp each frame when it arrives from the stream.
    */
   RTSPCapturer(
     const std::string & url,
     ip_camera_ros2::FrameBuffer & frame_buffer,
-    rclcpp::Logger logger);
+    rclcpp::Logger logger,
+    rclcpp::Clock::SharedPtr clock);
 
   /**
    * @brief Destroy the RTSPCapturer and release capture resources.
@@ -94,6 +96,7 @@ private:
   std::string url_;
   ip_camera_ros2::FrameBuffer & frame_buffer_;
   rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
   cv::VideoCapture cap_;
   std::atomic<bool> running_{false};
 

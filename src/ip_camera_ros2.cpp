@@ -58,6 +58,7 @@ CallbackReturn IpCameraRos2::on_configure(const rclcpp_lifecycle::State &)
   }
 
   frame_buffer_ = std::make_unique<ip_camera_ros2::FrameBuffer>(buffer_size_);
+  last_published_stamp_.reset();
 
   RCLCPP_INFO(this->get_logger(), "Configured %s node", this->get_name());
   return CallbackReturn::SUCCESS;
@@ -76,7 +77,8 @@ CallbackReturn IpCameraRos2::on_activate(const rclcpp_lifecycle::State & state)
     cb_group_);
 
   // Only connect to the RTSP stream once active, and release it on deactivation.
-  capturer_ = std::make_unique<RTSPCapturer>(url_, *frame_buffer_, this->get_logger());
+  capturer_ = std::make_unique<RTSPCapturer>(
+    url_, *frame_buffer_, this->get_logger(), this->get_clock());
   capturer_thread_ = std::thread([this]() {
         capturer_->run();
     });
@@ -145,11 +147,18 @@ void IpCameraRos2::stop_capture()
 
 void IpCameraRos2::capture_ipcam_image()
 {
-  cv::Mat local_frame;
-  if (!frame_buffer_->pop_latest(local_frame)) {
+  ip_camera_ros2::StampedFrame captured;
+  if (!frame_buffer_->pop_latest(captured)) {
     RCLCPP_DEBUG(this->get_logger(), "No frames available in buffer");
     return;
   }
+
+  // Never publish the same capture twice
+  if (last_published_stamp_ && captured.stamp == *last_published_stamp_) {
+    return;
+  }
+
+  cv::Mat local_frame = captured.image;
 
   // Crop or resize
   const int orig_cols = local_frame.cols;
@@ -164,8 +173,9 @@ void IpCameraRos2::capture_ipcam_image()
     return;
   }
 
-  // Stamp and publish
-  const rclcpp::Time stamp = this->get_clock()->now();
+  // Stamp with the arrival of the frame, corrected by the configured constant latency
+  const rclcpp::Time stamp = captured.stamp - rclcpp::Duration::from_seconds(stamp_offset_);
+  last_published_stamp_ = captured.stamp;
   image_msg_.header.stamp = stamp;
   image_msg_.image = local_frame;
 
@@ -227,6 +237,12 @@ void IpCameraRos2::update_params()
 
   declare_and_get(
     "tf", std::string("camera_optical_link"), "Camera frame id", frame_);
+
+  declare_and_get(
+    "stamp_offset", 0.0,
+    "Seconds subtracted from the time a frame reaches the host to compensate the constant "
+    "latency of the camera and the stream",
+    stamp_offset_);
 
   declare_and_get(
     "frame_rate", 30,

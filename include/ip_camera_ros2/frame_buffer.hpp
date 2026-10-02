@@ -20,9 +20,22 @@
 #include <mutex>
 
 #include "opencv2/opencv.hpp"
+#include "rclcpp/time.hpp"
 
 namespace ip_camera_ros2
 {
+
+/**
+ * @brief A frame together with the time it reached the host.
+ */
+struct StampedFrame
+{
+  /// Decoded image
+  cv::Mat image;
+
+  /// Time at which the frame arrived from the stream
+  rclcpp::Time stamp{0, 0, RCL_ROS_TIME};
+};
 
 /**
  * @brief Thread-safe hand-off point between the capture thread (producer) and the
@@ -48,19 +61,19 @@ public:
    *
    * @param frame Frame to push (moved in).
    */
-  void push(cv::Mat frame);
+  void push(StampedFrame frame);
 
   /**
    * @brief Pop the most recent frame and discard any older backlog.
    *
-   * @param out Set to the most recent frame if one was available.
+   * @param out Set to the most recent frame, with its stamp, if one was available.
    * @return true if a frame was available and `out` was set, false if the buffer was empty.
    */
-  bool pop_latest(cv::Mat & out);
+  bool pop_latest(StampedFrame & out);
 
 private:
   mutable std::mutex mutex_;
-  std::deque<cv::Mat> frames_;
+  std::deque<StampedFrame> frames_;
   size_t max_size_;
 };
 

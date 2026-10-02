@@ -19,17 +19,18 @@
 namespace
 {
 
-/// @brief 1x1 frame whose single pixel value identifies it in assertions.
-cv::Mat make_marker_frame(uchar value)
+/// @brief 1x1 frame whose single pixel value identifies it in assertions, stamped with its value.
+ip_camera_ros2::StampedFrame make_marker_frame(uchar value)
 {
-  return cv::Mat(1, 1, CV_8UC1, cv::Scalar(value));
+  return ip_camera_ros2::StampedFrame{
+    cv::Mat(1, 1, CV_8UC1, cv::Scalar(value)), rclcpp::Time(value, 500, RCL_ROS_TIME)};
 }
 
 }  // namespace
 
 TEST(FrameBuffer, PopLatestOnEmptyBufferReturnsFalse) {
   ip_camera_ros2::FrameBuffer buffer(2);
-  cv::Mat out;
+  ip_camera_ros2::StampedFrame out;
   EXPECT_FALSE(buffer.pop_latest(out));
 }
 
@@ -37,9 +38,9 @@ TEST(FrameBuffer, PopLatestReturnsThePushedFrame) {
   ip_camera_ros2::FrameBuffer buffer(2);
   buffer.push(make_marker_frame(42));
 
-  cv::Mat out;
+  ip_camera_ros2::StampedFrame out;
   ASSERT_TRUE(buffer.pop_latest(out));
-  EXPECT_EQ(out.at<uchar>(0, 0), 42);
+  EXPECT_EQ(out.image.at<uchar>(0, 0), 42);
 }
 
 TEST(FrameBuffer, PopLatestDrainsTheWholeBacklog) {
@@ -48,9 +49,9 @@ TEST(FrameBuffer, PopLatestDrainsTheWholeBacklog) {
   buffer.push(make_marker_frame(2));
   buffer.push(make_marker_frame(3));
 
-  cv::Mat out;
+  ip_camera_ros2::StampedFrame out;
   ASSERT_TRUE(buffer.pop_latest(out));
-  EXPECT_EQ(out.at<uchar>(0, 0), 3);
+  EXPECT_EQ(out.image.at<uchar>(0, 0), 3);
 
   // The backlog (frames 1 and 2) must have been discarded, not just the most recent one.
   EXPECT_FALSE(buffer.pop_latest(out));
@@ -61,9 +62,26 @@ TEST(FrameBuffer, DropsOldestFrameOnceMaxSizeIsReached) {
   buffer.push(make_marker_frame(1));
   buffer.push(make_marker_frame(2));
 
-  cv::Mat out;
+  ip_camera_ros2::StampedFrame out;
   ASSERT_TRUE(buffer.pop_latest(out));
-  EXPECT_EQ(out.at<uchar>(0, 0), 2);
+  EXPECT_EQ(out.image.at<uchar>(0, 0), 2);
+}
+
+TEST(FrameBuffer, PopLatestKeepsTheStampOfTheMostRecentFrame) {
+  ip_camera_ros2::FrameBuffer buffer(3);
+  buffer.push(make_marker_frame(1));
+  buffer.push(make_marker_frame(2));
+
+  ip_camera_ros2::StampedFrame out;
+  ASSERT_TRUE(buffer.pop_latest(out));
+  EXPECT_EQ(out.stamp.seconds(), 2.0000005);
+  EXPECT_EQ(out.stamp.get_clock_type(), RCL_ROS_TIME);
+}
+
+TEST(StampedFrame, DefaultStampIsZero) {
+  const ip_camera_ros2::StampedFrame frame;
+  EXPECT_TRUE(frame.image.empty());
+  EXPECT_EQ(frame.stamp.nanoseconds(), 0);
 }
 
 int main(int argc, char ** argv)

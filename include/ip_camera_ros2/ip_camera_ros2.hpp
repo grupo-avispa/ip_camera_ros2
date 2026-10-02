@@ -19,6 +19,7 @@
 // C++
 #include <ios>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -105,6 +106,12 @@ private:
 
   /// Maximum number of frames held in frame_buffer_
   size_t buffer_size_;
+
+  /// Seconds subtracted from the arrival time of a frame to get its stamp
+  double stamp_offset_{0.0};
+
+  /// Capture time of the last published frame, used to avoid publishing it twice
+  std::optional<rclcpp::Time> last_published_stamp_;
 
   /// Shared hand-off point between the capture thread and the publishing timer
   std::unique_ptr<ip_camera_ros2::FrameBuffer> frame_buffer_;

@@ -18,12 +18,34 @@
 namespace ip_camera_ros2
 {
 
-std::string derive_camera_info_topic(const std::string & image_topic)
+namespace
+{
+
+/**
+ * @brief Replace the last path component of a topic with another name.
+ *
+ * @param image_topic Base image topic.
+ * @param name Name that replaces the last component.
+ * @return The sibling name in the same namespace as the topic.
+ */
+std::string sibling_name(const std::string & image_topic, const std::string & name)
 {
   const auto last_slash = image_topic.find_last_of('/');
   const std::string parent =
     (last_slash == std::string::npos) ? std::string() : image_topic.substr(0, last_slash);
-  return parent + "/camera_info";
+  return parent + "/" + name;
+}
+
+}  // namespace
+
+std::string derive_camera_info_topic(const std::string & image_topic)
+{
+  return sibling_name(image_topic, "camera_info");
+}
+
+std::string derive_set_camera_info_service(const std::string & image_topic)
+{
+  return sibling_name(image_topic, "set_camera_info");
 }
 
 }  // namespace ip_camera_ros2

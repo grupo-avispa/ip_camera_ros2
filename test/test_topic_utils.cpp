@@ -29,6 +29,21 @@ TEST(DeriveCameraInfoTopic, RelativeTopicWithoutSlash) {
   EXPECT_EQ(ip_camera_ros2::derive_camera_info_topic("image_raw"), "/camera_info");
 }
 
+TEST(DeriveSetCameraInfoService, RootTopic) {
+  EXPECT_EQ(ip_camera_ros2::derive_set_camera_info_service("/image"), "/set_camera_info");
+}
+
+TEST(DeriveSetCameraInfoService, NamespacedTopic) {
+  EXPECT_EQ(
+    ip_camera_ros2::derive_set_camera_info_service("/ceil01/image"), "/ceil01/set_camera_info");
+}
+
+TEST(DeriveSetCameraInfoService, RelativeTopic) {
+  EXPECT_EQ(
+    ip_camera_ros2::derive_set_camera_info_service("camera/image_raw"), "camera/set_camera_info");
+  EXPECT_EQ(ip_camera_ros2::derive_set_camera_info_service("image_raw"), "/set_camera_info");
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);

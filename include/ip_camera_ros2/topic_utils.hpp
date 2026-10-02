@@ -34,6 +34,19 @@ namespace ip_camera_ros2
  */
 std::string derive_camera_info_topic(const std::string & image_topic);
 
+/**
+ * @brief Derive the name of the `set_camera_info` service from a base image topic.
+ *
+ * Follows the same convention as derive_camera_info_topic(): the last path component of
+ * `image_topic` is replaced with `set_camera_info` (e.g. "/image" -> "/set_camera_info",
+ * "/ceil01/image" -> "/ceil01/set_camera_info"), which is where calibration tools expect it
+ * once they remap their default `camera/set_camera_info`.
+ *
+ * @param image_topic Base image topic.
+ * @return Name of the service that sets the camera calibration.
+ */
+std::string derive_set_camera_info_service(const std::string & image_topic);
+
 }  // namespace ip_camera_ros2
 
 #endif  // IP_CAMERA_ROS2__TOPIC_UTILS_HPP_

@@ -25,7 +25,7 @@ FrameBuffer::FrameBuffer(size_t max_size)
 {
 }
 
-void FrameBuffer::push(cv::Mat frame)
+void FrameBuffer::push(StampedFrame frame)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   if (frames_.size() >= max_size_) {
@@ -34,7 +34,7 @@ void FrameBuffer::push(cv::Mat frame)
   frames_.push_back(std::move(frame));
 }
 
-bool FrameBuffer::pop_latest(cv::Mat & out)
+bool FrameBuffer::pop_latest(StampedFrame & out)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   if (frames_.empty()) {

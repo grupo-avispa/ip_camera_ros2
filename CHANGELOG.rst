@@ -7,8 +7,40 @@ All notable changes to the ip_camera_ros2 project will be documented in this fil
 [Unreleased]
 ============
 
+Added
+-----
+- Added ``check_calibration()`` and ``CalibrationCheck`` in ``camera_info_builder.hpp``: a
+  calibration is only valid with positive ``fx`` and ``fy``, ``K[8] == 1`` and a number of
+  distortion coefficients that matches ``distortion_model`` (4 for ``equidistant``, 5 for
+  ``plumb_bob``, 8 for ``rational_polynomial``). Other models only produce a warning. 8 tests added
+  to ``test_camera_info_builder``.
+- Added ``StampedFrame`` to ``FrameBuffer``. ``RTSPCapturer`` now takes an ``rclcpp::Clock`` and
+  stamps each frame right after a successful ``grab()``.
+- Added the ``stamp_offset`` parameter, subtracted from the capture stamp.
+- Added the ``set_camera_info`` service (``sensor_msgs/srv/SetCameraInfo``), which validates a
+  calibration and applies it as node parameters, and ``derive_set_camera_info_service()`` in
+  ``topic_utils.hpp``.
+- Added the ``calibration_width`` and ``calibration_height`` parameters. ``CameraInfo`` is not
+  published if the published image has another size.
+- Added the ``x``, ``y``, ``z``, ``roll``, ``pitch``, ``yaw``, ``parent_frame`` and ``publish_tf``
+  arguments to ``image_and_tf.launch.py``, and ``namespace`` to ``image.launch.py``.
+- Added ``test/test_ip_camera_node.cpp`` (10 tests) with the node fed with injected frames, and
+  ``doc/fisheye_calibration.md``.
+
+Changed
+-------
+- Images and ``CameraInfo`` are stamped with the arrival time of the frame, minus
+  ``stamp_offset``, instead of the time at which the timer publishes them. A capture is never
+  published twice.
+- The calibration parameters are always declared and ``enable_cam_info`` and the calibration
+  parameters can be changed at runtime. The ``CameraInfo`` publisher is always created.
+- ``config/params.yaml`` has ``enable_cam_info: false``, ``stamp_offset`` and the calibration size,
+  and applies to any namespace.
+- ``image_and_tf.launch.py`` no longer publishes a fixed zero pose.
+
 Fixed
 -----
+- Fixed the duplicated ``autostart`` declaration in ``image.launch.py``.
 - Fixed a crash in ``IpCameraRos2::capture_ipcam_image()`` when the configured crop ROI
   (``offset_x``, ``offset_y``, ``image_width``, ``image_height``) fell outside the actual
   frame bounds; the ROI is now clamped with ``cv::Rect`` intersection and the frame is

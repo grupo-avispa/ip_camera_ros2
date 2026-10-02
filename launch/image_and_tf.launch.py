@@ -22,6 +22,7 @@ import os
 from ament_index_python import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import LifecycleNode, Node
 import xacro
@@ -58,12 +59,39 @@ def generate_launch_description():
 
     # Create the launch configuration variables:
     use_sim_time = LaunchConfiguration('use_sim_time')
+    publish_tf = LaunchConfiguration('publish_tf')
 
     # Map these variables to arguments: can be set from the command line or a default will be used
     use_sim_time_launch_arg = DeclareLaunchArgument(
         'use_sim_time',
         default_value='false',
         description='Use simulation (Gazebo) clock if true'
+    )
+
+    declare_publish_tf_arg = DeclareLaunchArgument(
+        'publish_tf',
+        default_value='true',
+        description='Publish the camera TF. Set it to false if another node publishes the pose '
+                    'of the camera, so that its frame does not get two parents'
+    )
+
+    # Pose of the camera in its parent frame, as the arguments of static_transform_publisher
+    pose_args = {
+        'x': 'X position of the camera in meters',
+        'y': 'Y position of the camera in meters',
+        'z': 'Z position of the camera in meters',
+        'roll': 'Roll of the camera in radians',
+        'pitch': 'Pitch of the camera in radians',
+        'yaw': 'Yaw of the camera in radians',
+    }
+    declare_pose_args = [
+        DeclareLaunchArgument(name, default_value='0', description=description)
+        for name, description in pose_args.items()
+    ]
+    declare_parent_frame_arg = DeclareLaunchArgument(
+        'parent_frame',
+        default_value='map',
+        description='Parent frame of camera_base_link'
     )
 
     # Create robot description from xacro file
@@ -75,6 +103,7 @@ def generate_launch_description():
         executable='robot_state_publisher',
         name='camera_state_publisher',
         output='screen',
+        condition=IfCondition(publish_tf),
         parameters=[{
             'use_sim_time': use_sim_time,
             'publish_frequency': 30.0,
@@ -87,7 +116,17 @@ def generate_launch_description():
         namespace='',
         executable='static_transform_publisher',
         name='ipcam_tf',
-        arguments=['0', '0', '0', '0', '0', '0', 'map', 'camera_base_link']
+        condition=IfCondition(publish_tf),
+        arguments=[
+            '--x', LaunchConfiguration('x'),
+            '--y', LaunchConfiguration('y'),
+            '--z', LaunchConfiguration('z'),
+            '--roll', LaunchConfiguration('roll'),
+            '--pitch', LaunchConfiguration('pitch'),
+            '--yaw', LaunchConfiguration('yaw'),
+            '--frame-id', LaunchConfiguration('parent_frame'),
+            '--child-frame-id', 'camera_base_link',
+        ]
     )
     # Create the IP Cam lifecycle node.
     ipcam_ros2_node = LifecycleNode(
@@ -109,6 +148,9 @@ def generate_launch_description():
         declare_log_level_arg,
         declare_autostart_arg,
         use_sim_time_launch_arg,
+        declare_publish_tf_arg,
+        *declare_pose_args,
+        declare_parent_frame_arg,
         camera_state_publisher_node,
         ipcam_tf_node,
         ipcam_ros2_node

@@ -36,6 +36,7 @@ def generate_launch_description():
     params_file = LaunchConfiguration('params_file')
     log_level = LaunchConfiguration('log_level')
     autostart = LaunchConfiguration('autostart')
+    namespace = LaunchConfiguration('namespace')
 
     declare_params_file_arg = DeclareLaunchArgument(
         'params_file',
@@ -55,16 +56,16 @@ def generate_launch_description():
         description='Automatically configure and activate the lifecycle node on launch'
     )
 
-    declare_autostart_arg = DeclareLaunchArgument(
-        'autostart',
-        default_value='true',
-        description='Automatically configure and activate the node on launch'
+    declare_namespace_arg = DeclareLaunchArgument(
+        'namespace',
+        default_value='',
+        description='Namespace of the node, to launch several cameras'
     )
 
     # Prepare the ROS2 lifecycle node.
     ipcam_ros2_node = LifecycleNode(
         package='ip_camera_ros2',
-        namespace='',
+        namespace=namespace,
         executable='ip_camera_ros2',
         name='ip_camera_ros2',
         parameters=[params_file],
@@ -80,6 +81,6 @@ def generate_launch_description():
         declare_params_file_arg,
         declare_log_level_arg,
         declare_autostart_arg,
-        declare_autostart_arg,
+        declare_namespace_arg,
         ipcam_ros2_node,
     ])

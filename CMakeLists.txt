@@ -52,6 +52,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -80,10 +81,13 @@ target_link_libraries(${library_name}
   PUBLIC
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
+  rclcpp_components::component
   ${sensor_msgs_TARGETS}
   cv_bridge::cv_bridge
   ${OpenCV_LIBS}
 )
+
+rclcpp_components_register_nodes(${library_name} "IpCameraRos2")
 
 # Add executables
 add_executable(${PROJECT_NAME} src/main.cpp)

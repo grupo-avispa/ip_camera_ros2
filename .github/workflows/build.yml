@@ -5,13 +5,13 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [rolling, lyrical]
   pull_request:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout Repository
@@ -19,12 +19,12 @@ jobs:
       - name: Setup ROS 2
         uses: ros-tooling/setup-ros@0.7.19
         with:
-          required-ros-distributions: jazzy
+          required-ros-distributions: lyrical
       - name: Build packages
         uses: ros-tooling/action-ros-ci@0.4.8
         with:
           package-name: ip_camera_ros2
-          target-ros2-distro: jazzy
+          target-ros2-distro: lyrical
           colcon-defaults: |
             {
               "build": {

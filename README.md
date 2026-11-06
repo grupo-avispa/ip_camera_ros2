@@ -1,5 +1,5 @@
 # ip_camera_ros2
-![ROS2](https://img.shields.io/badge/ros2-jazzy-blue?logo=ros&logoColor=white)
+![ROS2](https://img.shields.io/badge/ros2-lyrical-9cf?logo=ros&logoColor=white)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Build](https://github.com/grupo-avispa/ip_camera_ros2/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/grupo-avispa/ip_camera_ros2/actions/workflows/build.yml)
 
@@ -10,14 +10,15 @@ This ROS2 package provides a generic interface for publishing RGB image from any
 ![RGB](doc/image_and_tf.png)
 
 
-The ip_camera_ros2 package has been tested under [ROS2] jazzy on [Ubuntu] 24.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
+
+The ip_camera_ros2 package has been tested under [ROS2] lyrical on [Ubuntu] 26.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
 ## Installation
 ### Building from Source
 
 #### Dependencies
 
-- [Robot Operating System (ROS) 2](https://docs.ros.org/en/jazzy/) (middleware for robotics),
+- [Robot Operating System (ROS) 2](https://docs.ros.org/en/lyrical/) (middleware for robotics),
 - [OpenCV](https://opencv.org/) (computer vision library),
 - [cv_bridge](http://wiki.ros.org/cv_bridge) (interface OpenCV with ROS),
 - [compressed_image_transport](https://github.com/ros-perception/image_transport_plugins) (JPEG encoding for the `image/compressed` topic; only needed to view it, not to publish)
@@ -27,13 +28,13 @@ The ip_camera_ros2 package has been tested under [ROS2] jazzy on [Ubuntu] 24.04.
 To build from source, clone the latest version from the main repository into your colcon workspace by running the following commands:
 ```bash
 cd colcon_workspace/src
-git clone https://github.com/grupo-avispa/ip_camera_ros2.git -b main
+git clone https://github.com/grupo-avispa/ip_camera_ros2.git -b lyrical
 ```
 
 Then, install the ROS2 dependencies using rosdep and build the package using:
 ```bash
 cd colcon_workspace
-rosdep install -i --from-path src --rosdistro jazzy -y
+rosdep install -i --from-path src --rosdistro lyrical -y
 colcon build --symlink-install
 ```
 
